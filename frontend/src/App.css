@@ -1,0 +1,218 @@
+/* Custom styles for CyberSage 2.0 */
+
+.app {
+  text-align: center;
+}
+
+.app-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-logo {
+    animation: app-logo-spin infinite 20s linear;
+  }
+}
+
+@keyframes app-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Cyber-themed animations */
+@keyframes pulse-green {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse-green {
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes glow {
+  0%, 100% {
+    text-shadow: 0 0 5px #10b981;
+  }
+  50% {
+    text-shadow: 0 0 20px #10b981, 0 0 30px #10b981;
+  }
+}
+
+.glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Dashboard specific styles */
+.dashboard-card {
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.dashboard-card:hover {
+  border-color: #10b981;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);
+}
+
+/* Scanner interface styles */
+.scanner-form {
+  background: rgba(31, 41, 55, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+.scanner-input {
+  background: rgba(17, 24, 39, 0.8);
+  border: 1px solid rgba(55, 65, 81, 0.8);
+  transition: all 0.3s ease;
+}
+
+.scanner-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.scan-button {
+  background: linear-gradient(45deg, #10b981, #059669);
+  transition: all 0.3s ease;
+}
+
+.scan-button:hover {
+  background: linear-gradient(45deg, #059669, #047857);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Vulnerability list styles */
+.vulnerability-item {
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.vulnerability-item:hover {
+  border-left-color: #10b981;
+  background: rgba(31, 41, 55, 0.6);
+}
+
+.vulnerability-critical {
+  border-left-color: #ef4444;
+}
+
+.vulnerability-high {
+  border-left-color: #f59e0b;
+}
+
+.vulnerability-medium {
+  border-left-color: #eab308;
+}
+
+.vulnerability-low {
+  border-left-color: #22c55e;
+}
+
+/* Navigation styles */
+.nav-item {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.nav-item:hover {
+  background: rgba(31, 41, 55, 0.8);
+  color: #ffffff;
+}
+
+.nav-item.active {
+  background: linear-gradient(45deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+/* Status indicators */
+.status-indicator {
+  position: relative;
+}
+
+.status-indicator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(45deg, transparent, rgba(16, 185, 129, 0.5), transparent);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading states */
+.skeleton {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Modal styles */
+.modal-backdrop {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: #1f2937;
+  border: 1px solid #374151;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+}
+
+/* Tooltip styles */
+.tooltip {
+  position: relative;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  z-index: 50;
+}
+
+.tooltip:hover::after {
+  opacity: 1;
+}

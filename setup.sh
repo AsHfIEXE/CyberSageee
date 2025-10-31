@@ -1,11 +1,13 @@
 #!/bin/bash
 
-# 🚀 CyberSage 2.0 - Lightning Fast Setup Script
-# Automated installation for Linux/macOS
+# CyberSage 2.0 - Elite Vulnerability Intelligence Platform
+# Automated Setup Script with Enhanced Features
+# Author: CyberSage Team
+# Version: 2.0.0
 
-set -e  # Exit on any error
+set -e
 
-# Colors for output
+# Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -14,424 +16,409 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
-print_step() {
-    echo -e "\n${CYAN}➤ $1${NC}"
-}
+# Banner
+echo -e "${CYAN}"
+echo "███████╗ █████╗  ██████╗ ███████╗    ███████╗██╗   ██╗██████╗ ███████╗"
+echo "██╔════╝██╔══██╗██╔════╝ ██╔════╝    ██╔════╝██║   ██║██╔══██╗██╔════╝"
+echo "█████╗  ███████║██║  ███╗█████╗      ███████╗██║   ██║██████╔╝█████╗  "
+echo "██╔══╝  ██╔══██║██║   ██║██╔══╝      ╚════██║██║   ██║██╔══██╗██╔══╝  "
+echo "██║     ██║  ██║╚██████╔╝███████╗    ███████║╚██████╔╝██║  ██║███████╗"
+echo "╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝    ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝"
+echo -e "${NC}"
+echo -e "${GREEN}🧠 CyberSage v2.0 - Elite Vulnerability Intelligence Platform${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
-}
-
-print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
-}
-
-print_error() {
-    echo -e "${RED}❌ $1${NC}"
-}
-
-print_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
-}
-
-# Function to print header banner
-print_header() {
-    clear
-    echo -e "${CYAN}"
-    echo "╔════════════════════════════════════════════════════════╗"
-    echo "║                                                        ║"
-    echo "║          🛡️  CyberSage 2.0 Installation  🛡️            ║"
-    echo "║                                                        ║"
-    echo "║     Professional Security Testing Platform             ║"
-    echo "║                                                        ║"
-    echo "╚════════════════════════════════════════════════════════╝"
-    echo -e "${NC}"
-    echo ""
-}
-
-# Function to check command existence
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-# Function to install package if not present
-install_if_missing() {
-    local package=$1
-    if command_exists "$package"; then
-        print_success "$package is already installed"
-    else
-        print_info "Installing $package..."
-        if eval "$INSTALL_COMMAND $package" >/dev/null 2>&1; then
-            print_success "$package installed successfully"
-        else
-            print_warning "Failed to install $package (may be optional)"
-        fi
-    fi
-}
-
-# Detect OS and package manager
-detect_system() {
-    print_step "Detecting operating system..."
-    
+# Detect OS
+detect_os() {
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        OS="linux"
-        # Detect Linux distribution
-        if [ -f /etc/debian_version ]; then
-            DISTRO="debian"
-            INSTALL_COMMAND="sudo apt install -y"
-        elif [ -f /etc/redhat-release ]; then
-            DISTRO="redhat"
-            INSTALL_COMMAND="sudo yum install -y"
-        elif [ -f /etc/arch-release ]; then
-            DISTRO="arch"
-            INSTALL_COMMAND="sudo pacman -S --noconfirm"
+        if command -v apt-get >/dev/null 2>&1; then
+            OS="ubuntu"
+            PKG_MANAGER="apt"
+        elif command -v yum >/dev/null 2>&1; then
+            OS="centos"
+            PKG_MANAGER="yum"
+        elif command -v pacman >/dev/null 2>&1; then
+            OS="arch"
+            PKG_MANAGER="pacman"
         else
-            DISTRO="unknown"
-            INSTALL_COMMAND="echo"
+            OS="linux"
+            PKG_MANAGER="unknown"
         fi
-        print_success "Linux detected - $DISTRO distribution"
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         OS="macos"
-        DISTRO="macos"
-        if command_exists brew; then
-            INSTALL_COMMAND="brew install"
-            print_success "macOS detected - Homebrew available"
-        else
-            print_warning "macOS detected - Homebrew not found"
-            print_info "Please install Homebrew: /bin/bash -c '\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'"
-            exit 1
-        fi
+        PKG_MANAGER="brew"
     else
-        print_error "Unsupported operating system: $OSTYPE"
+        echo -e "${RED}❌ Unsupported operating system: $OSTYPE${NC}"
+        exit 1
+    fi
+    
+    echo -e "${GREEN}✓ Detected OS: $OS${NC}"
+    echo -e "${GREEN}✓ Package Manager: $PKG_MANAGER${NC}"
+}
+
+# Check for sudo privileges
+check_sudo() {
+    if [[ $EUID -eq 0 ]]; then
+        SUDO=""
+    elif sudo -n true 2>/dev/null; then
+        SUDO="sudo"
+    else
+        echo -e "${YELLOW}⚠️  This script requires sudo privileges for package installation${NC}"
+        echo -e "${YELLOW}⚠️  Please run: sudo $0${NC}"
         exit 1
     fi
 }
 
-# Check prerequisites
-check_prerequisites() {
-    print_step "Checking prerequisites..."
+# Install system dependencies
+install_dependencies() {
+    echo -e "${BLUE}[1/6] Installing system dependencies...${NC}"
     
-    # Check Python 3
-    if command_exists python3; then
-        PYTHON_VERSION=$(python3 --version | cut -d' ' -f2)
-        print_success "Python 3 found: $PYTHON_VERSION"
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        $SUDO apt-get update -qq
+        $SUDO apt-get install -y python3 python3-pip python3-venv nodejs npm git curl wget unzip nmap python3-dev build-essential >/dev/null 2>&1
+    elif [[ "$PKG_MANAGER" == "yum" ]]; then
+        $SUDO yum groupinstall -y "Development Tools" >/dev/null 2>&1
+        $SUDO yum install -y python3 python3-pip nodejs npm git curl wget unzip nmap python3-devel >/dev/null 2>&1
+    elif [[ "$PKG_MANAGER" == "brew" ]]; then
+        brew install python3 node git curl wget nmap >/dev/null 2>&1
+    elif [[ "$PKG_MANAGER" == "pacman" ]]; then
+        $SUDO pacman -Sy --noconfirm python python-pip nodejs npm git curl wget nmap >/dev/null 2>&1
     else
-        print_error "Python 3 is required but not installed"
-        case $OS in
-            linux)
-                case $DISTRO in
-                    debian) echo "Install with: sudo apt update && sudo apt install python3 python3-pip" ;;
-                    redhat) echo "Install with: sudo yum install python3 python3-pip" ;;
-                    arch) echo "Install with: sudo pacman -S python python-pip" ;;
-                esac
-                ;;
-            macos) echo "Install with: brew install python3" ;;
-        esac
-        exit 1
+        echo -e "${YELLOW}⚠️  Unknown package manager, skipping system dependencies${NC}"
     fi
     
-    # Check pip
-    if command_exists pip3; then
-        print_success "pip3 found"
-    else
-        print_error "pip3 is required but not installed"
-        exit 1
-    fi
-    
-    # Check Node.js
-    if command_exists node; then
-        NODE_VERSION=$(node --version)
-        print_success "Node.js found: $NODE_VERSION"
-    else
-        print_error "Node.js is required but not installed"
-        case $OS in
-            linux) echo "Install with: curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt-get install -y nodejs" ;;
-            macos) echo "Install with: brew install node" ;;
-        esac
-        exit 1
-    fi
-    
-    # Check npm
-    if command_exists npm; then
-        NPM_VERSION=$(npm --version)
-        print_success "npm found: v$NPM_VERSION"
-    else
-        print_error "npm is required but not installed"
-        exit 1
-    fi
+    echo -e "${GREEN}✓ System dependencies installed${NC}"
 }
 
-# Install professional security tools
+# Install security tools
 install_security_tools() {
-    print_step "Installing professional security tools..."
+    echo -e "${BLUE}[2/6] Installing security tools...${NC}"
     
-    # Core tools list
-    CORE_TOOLS="nmap curl git wget"
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        $SUDO apt-get install -y nmap masscan gobuster dirb nikto wpscan sqlmap whois >/dev/null 2>&1 || true
+    elif [[ "$PKG_MANAGER" == "yum" ]]; then
+        $SUDO yum install -y nmap gobuster dirb nikto whois >/dev/null 2>&1 || true
+    elif [[ "$PKG_MANAGER" == "brew" ]]; then
+        brew install nmap gobuster nikto >/dev/null 2>&1 || true
+    elif [[ "$PKG_MANAGER" == "pacman" ]]; then
+        $SUDO pacman -Sy --noconfirm nmap gobuster dirb nikto >/dev/null 2>&1 || true
+    fi
     
-    # Distribution-specific installation
-    case $OS in
-        linux)
-            case $DISTRO in
-                debian)
-                    print_info "Updating package lists..."
-                    sudo apt update -qq >/dev/null 2>&1
-                    INSTALL_CMD="sudo apt install -y"
-                    ;;
-                redhat)
-                    INSTALL_CMD="sudo yum install -y"
-                    ;;
-                arch)
-                    INSTALL_CMD="sudo pacman -S --noconfirm"
-                    ;;
-            esac
-            
-            print_info "Installing core security tools..."
-            for tool in $CORE_TOOLS; do
-                install_if_missing "$tool"
-            done
-            
-            # Additional tools for Debian/Ubuntu
-            if [ "$DISTRO" == "debian" ]; then
-                OPTIONAL_TOOLS="nikto sqlmap gobuster dirb wordlists"
-                for tool in $OPTIONAL_TOOLS; do
-                    install_if_missing "$tool"
-                done
-            fi
-            ;;
-            
-        macos)
-            print_info "Installing core security tools via Homebrew..."
-            CORE_TOOLS_BREW="nmap curl git"
-            for tool in $CORE_TOOLS_BREW; do
-                if brew list | grep -q "^$tool$"; then
-                    print_success "$tool is already installed"
-                else
-                    print_info "Installing $tool..."
-                    brew install $tool >/dev/null 2>&1 && print_success "$tool installed" || print_warning "$tool installation failed"
-                fi
-            done
-            ;;
-    esac
+    echo -e "${GREEN}✓ Security tools installed${NC}"
 }
 
-# Setup Python virtual environment and backend
-setup_backend() {
-    print_step "Setting up Python backend..."
-    
-    cd backend || { print_error "Backend directory not found"; exit 1; }
-    
-    # Create virtual environment
-    if [ ! -d "venv" ]; then
-        print_info "Creating Python virtual environment..."
-        python3 -m venv venv
-        print_success "Virtual environment created"
-    else
-        print_success "Virtual environment already exists"
-    fi
-    
-    # Activate virtual environment
-    print_info "Activating virtual environment..."
-    source venv/bin/activate
-    
-    # Upgrade pip
-    print_info "Upgrading pip..."
-    pip install --upgrade pip >/dev/null 2>&1
-    
-    # Install Python dependencies
-    print_info "Installing Python dependencies..."
-    pip install -r requirements.txt >/dev/null 2>&1 && print_success "Python dependencies installed" || {
-        print_error "Failed to install Python dependencies"
-        exit 1
-    }
-    
-    # Setup environment file
-    if [ ! -f ".env" ]; then
-        print_info "Creating environment configuration..."
-        cp .env.example .env
-        print_success "Environment file created"
-    else
-        print_success "Environment file already exists"
-    fi
-    
-    cd ..
-    print_success "Backend setup completed"
-}
-
-# Setup Node.js frontend
-setup_frontend() {
-    print_step "Setting up Node.js frontend..."
-    
-    cd frontend || { print_error "Frontend directory not found"; exit 1; }
-    
-    # Install Node.js dependencies
-    print_info "Installing Node.js dependencies..."
-    if npm install >/dev/null 2>&1; then
-        print_success "Node.js dependencies installed"
-    else
-        print_warning "npm install had warnings, continuing anyway"
-    fi
-    
-    # Setup environment file
-    if [ ! -f ".env" ]; then
-        print_info "Creating frontend environment configuration..."
-        cp .env.example .env
-        print_success "Frontend environment file created"
-    else
-        print_success "Frontend environment file already exists"
-    fi
-    
-    cd ..
-    print_success "Frontend setup completed"
-}
-
-# Initialize database
-setup_database() {
-    print_step "Initializing database..."
+# Setup Python virtual environment
+setup_python_env() {
+    echo -e "${BLUE}[3/6] Setting up Python virtual environment...${NC}"
     
     cd backend
+    python3 -m venv venv
     source venv/bin/activate
     
-    # Create database directory if it doesn't exist
-    mkdir -p data
+    pip install --upgrade pip
+    pip install -r requirements.txt
     
-    print_info "Database will be created on first run"
+    deactivate
+    cd ..
+    
+    echo -e "${GREEN}✓ Python virtual environment created${NC}"
+}
+
+# Setup React frontend
+setup_frontend() {
+    echo -e "${BLUE}[4/6] Setting up React frontend...${NC}"
+    
+    cd frontend
+    
+    # Install dependencies
+    npm install --no-audit --no-fund >/dev/null 2>&1
+    
+    # Build the frontend
+    npm run build >/dev/null 2>&1
     
     cd ..
-    print_success "Database setup completed"
+    
+    echo -e "${GREEN}✓ Frontend built successfully${NC}"
+}
+
+# Generate .env files
+generate_env_files() {
+    echo -e "${BLUE}[5/6] Generating environment configuration...${NC}"
+    
+    # Backend .env
+    cat > backend/.env << EOF
+SECRET_KEY=$(openssl rand -hex 16)
+DATABASE_PATH=cybersage_v2.db
+FLASK_ENV=production
+FLASK_DEBUG=False
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+MAX_CONTENT_LENGTH=16777216
+NMAP_TIMEOUT=30
+NIKTO_TIMEOUT=60
+WPSCAN_TIMEOUT=300
+SQLMAP_TIMEOUT=300
+SECURITY_SCAN_TIMEOUT=180
+EOF
+    
+    # Frontend .env
+    cat > frontend/.env << EOF
+REACT_APP_BACKEND_URL=http://localhost:5000
+REACT_APP_WS_URL=ws://localhost:5000/scan
+GENERATE_SOURCEMAP=false
+PORT=3000
+EOF
+    
+    echo -e "${GREEN}✓ Environment files generated${NC}"
+}
+
+# Generate start script
+generate_start_script() {
+    echo -e "${BLUE}[6/6] Generating service management script...${NC}"
+    
+    cat > start.sh << 'EOF'
+#!/bin/bash
+
+# CyberSage 2.0 Service Manager
+# Enhanced with PID management and health checks
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$PROJECT_DIR/backend"
+FRONTEND_DIR="$PROJECT_DIR/frontend"
+PID_DIR="$PROJECT_DIR/pids"
+
+# Ensure PID directory exists
+mkdir -p "$PID_DIR"
+
+BACKEND_PID_FILE="$PID_DIR/backend.pid"
+FRONTEND_PID_FILE="$PID_DIR/frontend.pid"
+
+# Colors for output
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if a process is running
+is_running() {
+    local pid_file=$1
+    if [[ -f "$pid_file" ]]; then
+        local pid=$(cat "$pid_file")
+        if kill -0 "$pid" >/dev/null 2>&1; then
+            return 0
+        else
+            rm -f "$pid_file"
+            return 1
+        fi
+    fi
+    return 1
 }
 
 # Start services
 start_services() {
-    print_step "Starting CyberSage 2.0..."
+    log_info "Starting CyberSage 2.0 services..."
     
-    # Start backend in background
-    print_info "Starting backend server..."
-    cd backend
-    source venv/bin/activate
-    
-    # Check if port 5000 is available
-    if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        print_warning "Port 5000 is already in use"
-        print_info "Please stop the existing service or change the port"
+    # Start backend
+    if ! is_running "$BACKEND_PID_FILE"; then
+        log_info "Starting backend..."
+        cd "$BACKEND_DIR"
+        source venv/bin/activate
+        nohup python app.py > "$PROJECT_DIR/backend.log" 2>&1 &
+        echo $! > "$BACKEND_PID_FILE"
+        deactivate
+        cd "$PROJECT_DIR"
+        log_success "Backend started (PID: $(cat $BACKEND_PID_FILE))"
     else
-        nohup python app.py > ../backend.log 2>&1 &
-        BACKEND_PID=$!
-        echo $BACKEND_PID > ../backend.pid
-        print_success "Backend started (PID: $BACKEND_PID)"
+        log_warning "Backend is already running"
     fi
-    
-    cd ..
-    
-    # Wait a moment for backend to start
-    sleep 3
     
     # Start frontend
-    print_info "Starting frontend server..."
-    cd frontend
-    
-    # Check if port 3000 is available
-    if lsof -Pi :3000 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        print_warning "Port 3000 is already in use"
+    if ! is_running "$FRONTEND_PID_FILE"; then
+        log_info "Starting frontend..."
+        cd "$FRONTEND_DIR"
+        nohup npm start > "$PROJECT_DIR/frontend.log" 2>&1 &
+        echo $! > "$FRONTEND_PID_FILE"
+        cd "$PROJECT_DIR"
+        log_success "Frontend started (PID: $(cat $FRONTEND_PID_FILE))"
     else
-        nohup npm run dev > ../frontend.log 2>&1 &
-        FRONTEND_PID=$!
-        echo $FRONTEND_PID > ../frontend.pid
-        print_success "Frontend started (PID: $FRONTEND_PID)"
+        log_warning "Frontend is already running"
     fi
     
-    cd ..
-    
-    print_success "Services started successfully!"
+    echo ""
+    log_success "🎉 CyberSage 2.0 is running!"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${CYAN}🌐 Frontend:${NC} http://localhost:3000"
+    echo -e "${CYAN}🔧 Backend:${NC}  http://localhost:5000"
+    echo -e "${CYAN}📊 Health:${NC}   http://localhost:5000/api/health"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
-# Health check
-health_check() {
-    print_step "Performing health check..."
+# Stop services
+stop_services() {
+    log_info "Stopping CyberSage 2.0 services..."
     
-    sleep 5  # Give services time to start
+    # Stop frontend
+    if is_running "$FRONTEND_PID_FILE"; then
+        local pid=$(cat "$FRONTEND_PID_FILE")
+        log_info "Stopping frontend (PID: $pid)..."
+        kill "$pid" 2>/dev/null || true
+        sleep 2
+        kill -9 "$pid" 2>/dev/null || true
+        rm -f "$FRONTEND_PID_FILE"
+        log_success "Frontend stopped"
+    else
+        log_warning "Frontend is not running"
+    fi
+    
+    # Stop backend
+    if is_running "$BACKEND_PID_FILE"; then
+        local pid=$(cat "$BACKEND_PID_FILE")
+        log_info "Stopping backend (PID: $pid)..."
+        kill "$pid" 2>/dev/null || true
+        sleep 2
+        kill -9 "$pid" 2>/dev/null || true
+        rm -f "$BACKEND_PID_FILE"
+        log_success "Backend stopped"
+    else
+        log_warning "Backend is not running"
+    fi
+}
+
+# Restart services
+restart_services() {
+    log_info "Restarting CyberSage 2.0 services..."
+    stop_services
+    sleep 3
+    start_services
+}
+
+# Check status
+check_status() {
+    echo -e "${CYAN}🧠 CyberSage 2.0 Service Status${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     
     # Check backend
-    if curl -s http://localhost:5000/api/health >/dev/null 2>&1; then
-        print_success "Backend is running correctly"
+    if is_running "$BACKEND_PID_FILE"; then
+        local pid=$(cat "$BACKEND_PID_FILE")
+        echo -e "${GREEN}✅ Backend:${NC} Running (PID: $pid)"
+        if curl -s http://localhost:5000/api/health >/dev/null 2>&1; then
+            echo -e "${GREEN}   Health:${NC}  Healthy"
+        else
+            echo -e "${YELLOW}   Health:${NC}  Unreachable"
+        fi
     else
-        print_warning "Backend health check failed"
+        echo -e "${RED}❌ Backend:${NC} Stopped"
     fi
     
     # Check frontend
-    if curl -s http://localhost:3000 >/dev/null 2>&1; then
-        print_success "Frontend is running correctly"
+    if is_running "$FRONTEND_PID_FILE"; then
+        local pid=$(cat "$FRONTEND_PID_FILE")
+        echo -e "${GREEN}✅ Frontend:${NC} Running (PID: $pid)"
+        if curl -s http://localhost:3000 >/dev/null 2>&1; then
+            echo -e "${GREEN}   Status:${NC}  Accessible"
+        else
+            echo -e "${YELLOW}   Status:${NC}  Starting..."
+        fi
     else
-        print_warning "Frontend health check failed"
+        echo -e "${RED}❌ Frontend:${NC} Stopped"
+    fi
+    
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+# Show logs
+show_logs() {
+    echo -e "${CYAN}📋 CyberSage 2.0 Logs${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    
+    if [[ -f "$PROJECT_DIR/backend.log" ]]; then
+        echo -e "${YELLOW}Backend Log:${NC}"
+        tail -20 "$PROJECT_DIR/backend.log"
+        echo ""
+    fi
+    
+    if [[ -f "$PROJECT_DIR/frontend.log" ]]; then
+        echo -e "${YELLOW}Frontend Log:${NC}"
+        tail -20 "$PROJECT_DIR/frontend.log"
     fi
 }
 
-# Show completion message
-show_completion() {
-    clear
-    echo -e "${GREEN}"
-    echo "🎉 INSTALLATION COMPLETED SUCCESSFULLY!"
-    echo -e "${NC}"
-    echo ""
-    echo -e "${CYAN}🌐 CyberSage 2.0 is now running:${NC}"
-    echo -e "   Frontend: ${BLUE}http://localhost:3000${NC}"
-    echo -e "   Backend:  ${BLUE}http://localhost:5000${NC}"
-    echo ""
-    echo -e "${YELLOW}📱 Open your browser and navigate to:${NC}"
-    echo -e "   ${BLUE}http://localhost:3000${NC}"
-    echo ""
-    echo -e "${GREEN}✅ What's included:${NC}"
-    echo -e "   • 15+ Professional Security Tools"
-    echo -e "   • Real-time Vulnerability Scanning"
-    echo -e "   • AI-Powered Analysis Engine"
-    echo -e "   • Interactive Dashboard"
-    echo -e "   • Professional Reporting System"
-    echo ""
-    echo -e "${YELLOW}🔧 Management Commands:${NC}"
-    echo -e "   Stop services:    kill \$(cat backend.pid frontend.pid)"
-    echo -e "   View logs:        tail -f backend.log frontend.log"
-    echo -e "   Restart:          ./setup.sh"
-    echo ""
-    echo -e "${PURPLE}🛡️  Happy Scanning! Stay Secure!${NC}"
-    echo ""
-}
-
-# Main installation flow
-main() {
-    print_header
-    
-    # Check if we're in the right directory
-    if [ ! -f "setup.sh" ] || [ ! -d "backend" ] || [ ! -d "frontend" ]; then
-        print_error "Please run this script from the CyberSage-2.0 root directory"
-        print_info "Make sure you have extracted/cloned the complete project"
+# Main script logic
+case "${1:-start}" in
+    start)
+        start_services
+        ;;
+    stop)
+        stop_services
+        ;;
+    restart)
+        restart_services
+        ;;
+    status)
+        check_status
+        ;;
+    logs)
+        show_logs
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status|logs}"
         exit 1
-    fi
+        ;;
+esac
+EOF
     
-    # Run installation steps
-    detect_system
-    check_prerequisites
+    chmod +x start.sh
+    
+    echo -e "${GREEN}✓ Service management script created${NC}"
+}
+
+# Final setup
+final_setup() {
+    echo -e "${GREEN}🎉 Setup completed successfully!${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${CYAN}📋 Available Commands:${NC}"
+    echo -e "${YELLOW}  ./start.sh${NC}              # Start all services"
+    echo -e "${YELLOW}  ./start.sh --stop${NC}       # Stop all services"
+    echo -e "${YELLOW}  ./start.sh --restart${NC}    # Restart all services"
+    echo -e "${YELLOW}  ./start.sh --status${NC}     # Check service status"
+    echo -e "${YELLOW}  ./start.sh --logs${NC}       # Show service logs"
+    echo ""
+    echo -e "${GREEN}🌐 Access URLs:${NC}"
+    echo -e "${PURPLE}  Frontend: http://localhost:3000${NC}"
+    echo -e "${PURPLE}  Backend:  http://localhost:5000${NC}"
+    echo -e "${PURPLE}  API Docs: http://localhost:5000/api/docs${NC}"
+    echo ""
+    echo -e "${CYAN}💡 Tip: Run './start.sh' to start the services!${NC}"
+}
+
+# Main execution
+main() {
+    detect_os
+    check_sudo
+    install_dependencies
     install_security_tools
-    setup_backend
+    setup_python_env
     setup_frontend
-    setup_database
-    start_services
-    health_check
-    show_completion
+    generate_env_files
+    generate_start_script
+    final_setup
 }
 
-# Trap Ctrl+C and cleanup
-cleanup() {
-    echo -e "\n${YELLOW}🛑 Installation interrupted${NC}"
-    print_info "Cleaning up..."
-    # Kill any spawned processes
-    [ -f "backend.pid" ] && kill $(cat backend.pid) 2>/dev/null || true
-    [ -f "frontend.pid" ] && kill $(cat frontend.pid) 2>/dev/null || true
-    exit 1
-}
-
-trap cleanup INT
-
-# Run main installation
-main
-
-echo -e "\n${GREEN}🎊 CyberSage 2.0 setup completed!${NC}"
+# Run main function
+main "$@"

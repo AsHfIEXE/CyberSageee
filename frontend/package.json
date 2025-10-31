@@ -1,24 +1,59 @@
 {
-  "name": "cybersage-v2-frontend",
+  "name": "cybersage-frontend",
   "version": "2.0.0",
+  "description": "CyberSage 2.0 - Elite Vulnerability Intelligence Platform Frontend",
   "private": true,
   "dependencies": {
+    "@testing-library/jest-dom": "^6.4.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.5.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "tailwindcss": "^3.4.0",
-    "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.33"
+    "axios": "^1.6.0",
+    "socket.io-client": "^4.7.0",
+    "react-router-dom": "^6.18.0",
+    "lucide-react": "^0.292.0",
+    "@headlessui/react": "^1.7.17",
+    "framer-motion": "^10.16.0",
+    "react-hot-toast": "^2.4.0",
+    "recharts": "^2.8.0",
+    "date-fns": "^2.30.0",
+    "clsx": "^2.0.0",
+    "class-variance-authority": "^0.7.0",
+    "tailwind-merge": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.6",
+    "@tailwindcss/typography": "^0.5.10",
+    "tailwindcss": "^3.3.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "vite": "^5.0.0",
+    "@vitejs/plugin-react": "^4.2.0"
   },
   "scripts": {
     "start": "react-scripts start",
+    "dev": "react-scripts start",
     "build": "react-scripts build",
+    "build:production": "GENERATE_SOURCEMAP=false react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "test:coverage": "react-scripts test --coverage --watchAll=false",
+    "eject": "react-scripts eject",
+    "lint": "eslint src/**/*.{js,jsx,ts,tsx}",
+    "lint:fix": "eslint src/**/*.{js,jsx,ts,tsx} --fix",
+    "format": "prettier --write src/**/*.{js,jsx,ts,tsx,css,md}",
+    "analyze": "npm run build && npx serve -s build -l 3000",
+    "preview": "npm run build && npm run serve",
+    "serve": "serve -s build -l 3000",
+    "clean": "rm -rf build node_modules package-lock.json",
+    "reset": "npm run clean && npm install",
+    "postinstall": "npx tailwindcss -v >/dev/null 2>&1 || true"
   },
   "eslintConfig": {
     "extends": [
-      "react-app"
+      "react-app",
+      "react-app/jest"
     ]
   },
   "browserslist": {
@@ -32,5 +67,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "proxy": "http://localhost:5000"
 }
