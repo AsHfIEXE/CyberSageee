@@ -35,21 +35,6 @@ print_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
-print_header() {
-    clear
-    echo -e "${PURPLE}"
-    echo "███████╗██╗   ██╗██████╗ ███████╗██████╗ ███████╗ █████╗  ██████╗ ███████╗"
-    echo "██╔════╝╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗██╔════╝██╔══██╗██╔════╝ ██╔════╝"
-    echo "██║      ╚████╔╝ ██████╔╝█████╗  ██████╔╝███████╗███████║██║  ███╗█████╗"
-    echo "██║       ╚██╔╝  ██╔══██╗██╔══╝  ██╔══██╗╚════██║██╔══██║██║   ██║██╔══╝"
-    echo "╚██████╗   ██║   ██████╔╝███████╗██║  ██║███████║██║  ██║╚██████╔╝███████╗"
-    echo " ╚═════╝   ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝"
-                                                                                      
-    echo -e "${NC}"
-    echo -e "${CYAN}            Professional Cybersecurity Scanner v2.0${NC}"
-    echo -e "${CYAN}                Lightning Fast Installation${NC}\n"
-}
-
 # Function to check command existence
 command_exists() {
     command -v "$1" >/dev/null 2>&1
