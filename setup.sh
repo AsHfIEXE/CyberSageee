@@ -35,6 +35,21 @@ print_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
+# Function to print header banner
+print_header() {
+    clear
+    echo -e "${CYAN}"
+    echo "╔════════════════════════════════════════════════════════╗"
+    echo "║                                                        ║"
+    echo "║          🛡️  CyberSage 2.0 Installation  🛡️           ║"
+    echo "║                                                        ║"
+    echo "║     Professional Security Testing Platform            ║"
+    echo "║                                                        ║"
+    echo "╚════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+    echo ""
+}
+
 # Function to check command existence
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -84,7 +99,7 @@ detect_system() {
             print_success "macOS detected - Homebrew available"
         else
             print_warning "macOS detected - Homebrew not found"
-            print_info "Please install Homebrew: /bin/bash -c '$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'"
+            print_info "Please install Homebrew: /bin/bash -c '\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'"
             exit 1
         fi
     else
