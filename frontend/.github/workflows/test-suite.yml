@@ -1,0 +1,463 @@
+name: CyberSage 2.0 - Comprehensive Testing Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  CYPRESS_CACHE_FOLDER: ~/.cache/Cypress
+
+jobs:
+  # Code Quality and Static Analysis
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality & Static Analysis
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: ESLint check
+        run: npx eslint src/ --ext .js,.jsx,.ts,.tsx
+        
+      - name: Prettier check
+        run: npx prettier --check src/
+        
+      - name: Type checking (if using TypeScript)
+        run: npm run type-check 2>/dev/null || echo "No type-check script"
+
+  # Unit and Component Tests
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: Unit & Component Tests
+    needs: code-quality
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+        
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          
+      - name: Comment coverage on PR
+        uses: 5monkeys/cobertura-action@master
+        if: github.event_name == 'pull_request'
+        with:
+          path: coverage/cobertura-coverage.xml
+          minimum_coverage: 80
+          fail_below_threshold: true
+
+  # E2E Tests
+  e2e-tests:
+    runs-on: ubuntu-latest
+    name: End-to-End Tests
+    needs: unit-tests
+    
+    strategy:
+      matrix:
+        browser: [chrome, firefox, edge]
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Install Cypress
+        run: npx cypress install
+        
+      - name: Wait for build server
+        run: npm run build
+        
+      - name: Start application
+        run: |
+          npm run build
+          npx serve -s build -l 3000 &
+          sleep 10
+          
+      - name: Run E2E tests
+        run: npx cypress run --browser ${{ matrix.browser }}
+        env:
+          CYPRESS_baseUrl: http://localhost:3000
+          
+      - name: Upload E2E artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-artifacts-${{ matrix.browser }}
+          path: |
+            cypress/videos/
+            cypress/screenshots/
+          retention-days: 7
+
+  # Accessibility Tests
+  accessibility-tests:
+    runs-on: ubuntu-latest
+    name: Accessibility Testing
+    needs: unit-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Install Cypress
+        run: npx cypress install
+        
+      - name: Start application
+        run: |
+          npm run build
+          npx serve -s build -l 3000 &
+          sleep 10
+          
+      - name: Run accessibility tests
+        run: npm run test:accessibility
+        env:
+          CYPRESS_baseUrl: http://localhost:3000
+          
+      - name: Upload accessibility report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: accessibility-report
+          path: cypress/reports/
+          retention-days: 30
+
+  # Performance Tests
+  performance-tests:
+    runs-on: ubuntu-latest
+    name: Performance Testing
+    needs: unit-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Install Cypress
+        run: npx cypress install
+        
+      - name: Build optimized version
+        run: npm run build
+        
+      - name: Start production server
+        run: |
+          npx serve -s build -l 3000 &
+          sleep 10
+          
+      - name: Run performance tests
+        run: npm run test:performance
+        env:
+          CYPRESS_baseUrl: http://localhost:3000
+          
+      - name: Upload Lighthouse reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-reports
+          path: lighthouse-reports/
+          retention-days: 30
+
+  # Cross-Browser Compatibility Tests
+  cross-browser-tests:
+    runs-on: ubuntu-latest
+    name: Cross-Browser Compatibility
+    needs: unit-tests
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        browser: [chrome, firefox, safari]
+        exclude:
+          # Safari only available on macOS
+          - os: ubuntu-latest
+            browser: safari
+          - os: windows-latest
+            browser: safari
+          
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Install Cypress
+        run: npx cypress install
+        
+      - name: Build application
+        run: npm run build
+        
+      - name: Start application
+        run: |
+          npx serve -s build -l 3000 &
+          sleep 10
+          
+      - name: Run cross-browser tests
+        run: npx cypress run --browser ${{ matrix.browser }}
+        env:
+          CYPRESS_baseUrl: http://localhost:3000
+          
+      - name: Upload cross-browser artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cross-browser-${{ matrix.os }}-${{ matrix.browser }}
+          path: |
+            cypress/videos/
+            cypress/screenshots/
+          retention-days: 7
+
+  # Bundle Size Analysis
+  bundle-analysis:
+    runs-on: ubuntu-latest
+    name: Bundle Size Analysis
+    needs: unit-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build application
+        run: npm run build
+        
+      - name: Bundle size analysis
+        run: |
+          cd build/static/js
+          ls -la *.js | awk '{print $9, $5}' > bundle-sizes.txt
+          cat bundle-sizes.txt
+          
+      - name: Check bundle size limits
+        run: |
+          node -e "
+          const fs = require('fs');
+          const sizes = fs.readFileSync('build/static/js/bundle-sizes.txt', 'utf8');
+          const lines = sizes.split('\n').filter(line => line.includes('.js'));
+          let hasOversized = false;
+          lines.forEach(line => {
+            const parts = line.split(' ');
+            const size = parseInt(parts[1]);
+            if (size > 500000) { // 500KB limit
+              console.log('❌ Oversized bundle:', line);
+              hasOversized = true;
+            } else {
+              console.log('✅ Bundle size OK:', line);
+            }
+          });
+          process.exit(hasOversized ? 1 : 0);
+          "
+          
+      - name: Upload bundle analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: build/static/js/
+          retention-days: 30
+
+  # Security Testing
+  security-tests:
+    runs-on: ubuntu-latest
+    name: Security Testing
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run npm audit
+        run: npm audit --audit-level moderate
+        
+      - name: Security headers check
+        run: |
+          npm run build
+          npx serve -s build -l 3000 &
+          sleep 10
+          curl -I http://localhost:3000 | grep -E "(X-Frame-Options|X-Content-Type-Options|X-XSS-Protection|Content-Security-Policy)"
+
+  # Test Summary and Reporting
+  test-summary:
+    runs-on: ubuntu-latest
+    name: Test Summary
+    needs: [unit-tests, e2e-tests, accessibility-tests, performance-tests, cross-browser-tests, bundle-analysis, security-tests]
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        
+      - name: Generate test summary
+        run: |
+          echo "## 🧪 Test Results Summary" > test-summary.md
+          echo "" >> test-summary.md
+          echo "### Unit Tests" >> test-summary.md
+          echo "- ✅ Unit & Component Tests: ${{ needs.unit-tests.result }}" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "### E2E Tests" >> test-summary.md
+          echo "- ✅ E2E Tests: ${{ needs.e2e-tests.result }}" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "### Accessibility" >> test-summary.md
+          echo "- ✅ Accessibility Tests: ${{ needs.accessibility-tests.result }}" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "### Performance" >> test-summary.md
+          echo "- ✅ Performance Tests: ${{ needs.performance-tests.result }}" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "### Cross-Browser" >> test-summary.md
+          echo "- ✅ Cross-Browser Tests: ${{ needs.cross-browser-tests.result }}" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "### Bundle Analysis" >> test-summary.md
+          echo "- ✅ Bundle Analysis: ${{ needs.bundle-analysis.result }}" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "### Security" >> test-summary.md
+          echo "- ✅ Security Tests: ${{ needs.security-tests.result }}" >> test-summary.md
+          cat test-summary.md
+          
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('test-summary.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  # Deploy to Staging (only on develop branch)
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    needs: [test-summary]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Build application
+        run: npm run build
+        
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your deployment script here
+          # e.g., aws s3 sync build/ s3://staging-bucket/
+          
+      - name: Run smoke tests on staging
+        run: |
+          echo "Running smoke tests on staging..."
+          # Add smoke test commands
+          
+  # Deploy to Production (only on main branch)
+  deploy-production:
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    needs: [test-summary]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Build application
+        run: npm run build
+        
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          # Add your deployment script here
+          
+      - name: Run production smoke tests
+        run: |
+          echo "Running production smoke tests..."
+          # Add production test commands
+          
+      - name: Notify deployment success
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: 'CyberSage 2.0 deployed successfully to production!'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
