@@ -1,0 +1,27 @@
+version: "3.9"
+services:
+  backend:
+    image: python:3.10-slim
+    container_name: cybersage-backend
+    working_dir: /app
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change_me}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    command: bash -lc "pip install --no-cache-dir -r requirements.txt && python app.py"
+
+  frontend:
+    image: node:18-alpine
+    container_name: cybersage-frontend
+    working_dir: /usr/src/app
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:5000
+      - HOST=0.0.0.0
+    volumes:
+      - ./frontend:/usr/src/app
+    command: sh -c "npm install && npm start"
