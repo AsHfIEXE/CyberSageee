@@ -1,82 +1,76 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./src/**/*.{js,jsx,ts,tsx}",
-    "./public/index.html",
-  ],
-  theme: {
-    extend: {
-      colors: {
-        cyber: {
-          green: '#00ff88',
-          blue: '#0066ff',
-          red: '#ff3366',
-          yellow: '#ffff00',
-          bg: '#0a0a0a',
-          surface: '#1a1a1a',
-          border: '#333333',
-        },
-      },
-      fontFamily: {
-        'cyber': ['Courier New', 'monospace'],
-      },
-      animation: {
-        'pulse-cyber': 'pulse-cyber 2s ease-in-out infinite',
-        'glow': 'glow 2s ease-in-out infinite',
-        'matrix-rain': 'matrix-rain 3s linear infinite',
-        'scan-pulse': 'scan-pulse 2s ease-in-out infinite',
-      },
-      keyframes: {
-        'pulse-cyber': {
-          '0%, 100%': {
-            opacity: '1',
-          },
-          '50%': {
-            opacity: '0.5',
-          },
-        },
-        'glow': {
-          '0%, 100%': {
-            textShadow: '0 0 5px #00ff88',
-          },
-          '50%': {
-            textShadow: '0 0 20px #00ff88, 0 0 30px #00ff88',
-          },
-        },
-        'matrix-rain': {
-          '0%': {
-            transform: 'translateY(-100vh)',
-          },
-          '100%': {
-            transform: 'translateY(100vh)',
-          },
-        },
-        'scan-pulse': {
-          '0%': {
-            boxShadow: '0 0 0 0 rgba(16, 185, 129, 0.7)',
-          },
-          '70%': {
-            boxShadow: '0 0 0 10px rgba(16, 185, 129, 0)',
-          },
-          '100%': {
-            boxShadow: '0 0 0 0 rgba(16, 185, 129, 0)',
-          },
-        },
-      },
-      boxShadow: {
-        'cyber': '0 0 20px rgba(0, 255, 136, 0.3)',
-        'cyber-lg': '0 0 30px rgba(0, 255, 136, 0.5)',
-        'cyber-xl': '0 0 40px rgba(0, 255, 136, 0.7)',
-        'scan': '0 0 30px rgba(16, 185, 129, 0.5)',
-      },
-      backgroundImage: {
-        'cyber-gradient': 'linear-gradient(45deg, #00ff88, #0066ff)',
-        'danger-gradient': 'linear-gradient(45deg, #ff3366, #ff6666)',
-      },
-    },
-  },
-  plugins: [
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/typography'),
-  ],
+	darkMode: ['class'],
+	content: [
+		'./pages/**/*.{ts,tsx}',
+		'./components/**/*.{ts,tsx}',
+		'./app/**/*.{ts,tsx}',
+		'./src/**/*.{ts,tsx}',
+	],
+	theme: {
+		container: {
+			center: true,
+			padding: '2rem',
+			screens: {
+				'2xl': '1400px',
+			},
+		},
+		extend: {
+			colors: {
+				border: 'hsl(var(--border))',
+				input: 'hsl(var(--input))',
+				ring: 'hsl(var(--ring))',
+				background: 'hsl(var(--background))',
+				foreground: 'hsl(var(--foreground))',
+				primary: {
+					DEFAULT: '#2B5D3A',
+					foreground: 'hsl(var(--primary-foreground))',
+				},
+				secondary: {
+					DEFAULT: '#4A90E2',
+					foreground: 'hsl(var(--secondary-foreground))',
+				},
+				accent: {
+					DEFAULT: '#F5A623',
+					foreground: 'hsl(var(--accent-foreground))',
+				},
+				destructive: {
+					DEFAULT: 'hsl(var(--destructive))',
+					foreground: 'hsl(var(--destructive-foreground))',
+				},
+				muted: {
+					DEFAULT: 'hsl(var(--muted))',
+					foreground: 'hsl(var(--muted-foreground))',
+				},
+				popover: {
+					DEFAULT: 'hsl(var(--popover))',
+					foreground: 'hsl(var(--popover-foreground))',
+				},
+				card: {
+					DEFAULT: 'hsl(var(--card))',
+					foreground: 'hsl(var(--card-foreground))',
+				},
+			},
+			borderRadius: {
+				lg: 'var(--radius)',
+				md: 'calc(var(--radius) - 2px)',
+				sm: 'calc(var(--radius) - 4px)',
+			},
+			keyframes: {
+				'accordion-down': {
+					from: { height: 0 },
+					to: { height: 'var(--radix-accordion-content-height)' },
+				},
+				'accordion-up': {
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: 0 },
+				},
+			},
+			animation: {
+				'accordion-down': 'accordion-down 0.2s ease-out',
+				'accordion-up': 'accordion-up 0.2s ease-out',
+			},
+		},
+	},
+	plugins: [require('tailwindcss-animate')],
 }

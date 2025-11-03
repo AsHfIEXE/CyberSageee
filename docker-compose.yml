@@ -1,27 +1,71 @@
-version: "3.9"
-services:
-  backend:
-    image: python:3.10-slim
-    container_name: cybersage-backend
-    working_dir: /app
-    environment:
-      - SECRET_KEY=${SECRET_KEY:-change_me}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./backend:/app
-    command: bash -lc "pip install --no-cache-dir -r requirements.txt && python app.py"
+version: '3.8'
 
-  frontend:
-    image: node:18-alpine
-    container_name: cybersage-frontend
-    working_dir: /usr/src/app
+services:
+  # Backend service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cybersage-backend
     ports:
-      - "3000:3000"
+      - "5001:5001"
     environment:
-      - REACT_APP_BACKEND_URL=http://localhost:5000
-      - HOST=0.0.0.0
+      - FLASK_ENV=production
+      - PORT=5001
+      - DATABASE_URL=sqlite:///data/cybersage.db
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+    env_file:
+      - ./backend/.env
     volumes:
-      - ./frontend:/usr/src/app
-    command: sh -c "npm install && npm start"
+      - backend-data:/app/data
+      - ./backend:/app
+    restart: unless-stopped
+    networks:
+      - cybersage-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cybersage-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://backend:5001
+      - VITE_WS_URL=ws://backend:5001
+    restart: unless-stopped
+    networks:
+      - cybersage-network
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: cybersage-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    networks:
+      - cybersage-network
+
+volumes:
+  backend-data:
+    driver: local
+
+networks:
+  cybersage-network:
+    driver: bridge

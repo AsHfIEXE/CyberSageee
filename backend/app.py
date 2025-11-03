@@ -1,522 +1,449 @@
-from flask import Flask, jsonify, request, send_file
-from flask_socketio import SocketIO, emit
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import threading
-import time
+from flask_socketio import SocketIO, emit
 import os
-from datetime import datetime
+import sys
 import json
-import tempfile
+import time
+from datetime import datetime
+from typing import Dict, List, Any
 
-from core.database import Database
-from core.scan_orchestrator import ScanOrchestrator
-from core.realtime_broadcaster import RealTimeBroadcaster
-from core.pdf_generator import PDFReportGenerator
-from tools.integrations import ThirdPartyScannerIntegration
-from api.repeater import repeater_bp
+# Import AI modules
+sys.path.append(os.path.dirname(__file__))
+from ai_smart_prioritizer import AISmartPrioritizer
+from exploit_verifier import ExploitVerifier
+from business_impact_calculator import BusinessImpactCalculator
+from security_testing_engine import SecurityTestingEngine
 
-# Create Flask app
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cybersage_v2_elite_secret_2024')
+app = Flask(__name__, static_folder='../frontend/dist', static_url_path='')
+CORS(app, resources={r"/*": {"origins": "*"}})
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# Enable CORS for all routes
-CORS(app, resources={
-    r"/*": {
-        "origins": ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "*"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-        "supports_credentials": True
-    }
-})
+# Initialize AI modules
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
-# Create SocketIO instance
-socketio = SocketIO(
-    app,
-    cors_allowed_origins="*",
-    cors_credentials=False,
-    async_mode='threading',
-    logger=True,
-    engineio_logger=True,
-    ping_timeout=60,
-    ping_interval=25,
-    allow_upgrades=True,
-    transports=['websocket', 'polling'],  # Try websocket first
-    namespaces=['/scan']
-)
+# Simple in-memory database (replace with real DB in production)
+scans_db = {}
+ai_analysis_db = {}
+verification_db = {}
 
-# Initialize components
-db = Database()
-broadcaster = RealTimeBroadcaster(socketio)
-scan_orchestrator = ScanOrchestrator(db, broadcaster)
-pdf_generator = PDFReportGenerator()
-scanner_integration = ThirdPartyScannerIntegration(db, broadcaster)
+class Broadcaster:
+    """Socket.IO broadcaster for real-time updates"""
+    def __init__(self, socketio_instance):
+        self.socketio = socketio_instance
+    
+    def broadcast_log(self, scan_id, message):
+        self.socketio.emit('scan_log', {
+            'scan_id': scan_id,
+            'message': message,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    def broadcast_event(self, event_name, data):
+        self.socketio.emit(event_name, data)
 
-# Store active scans with cancellation support
-active_scans = {}
+broadcaster = Broadcaster(socketio)
 
-# ============================================================================
-# REST API ENDPOINTS
-# ============================================================================
+# Initialize AI components with fallback
+try:
+    ai_prioritizer = AISmartPrioritizer(OPENROUTER_API_KEY) if OPENROUTER_API_KEY else None
+    exploit_verifier = ExploitVerifier(database=None, broadcaster=broadcaster)
+    business_calculator = BusinessImpactCalculator()
+except Exception as e:
+    print(f"Warning: AI module initialization error: {e}")
+    ai_prioritizer = None
+    exploit_verifier = None
+    business_calculator = None
 
+# Initialize security testing engine
+security_tester = SecurityTestingEngine()
+
+# Serve frontend
 @app.route('/')
-def index():
+def serve_frontend():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    if os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, 'index.html')
+
+# API: Health check
+@app.route('/api/health', methods=['GET'])
+def health_check():
     return jsonify({
-        "status": "online",
-        "version": "2.0",
-        "name": "CyberSage Elite",
-        "timestamp": datetime.now().isoformat(),
-        "websocket": "enabled"
+        'status': 'healthy',
+        'ai_enabled': ai_prioritizer is not None,
+        'timestamp': datetime.now().isoformat()
     })
 
-@app.route('/api/websocket/health')
-def websocket_health():
-    """Check WebSocket health and connection info"""
-    return jsonify({
-        "status": "healthy",
-        "websocket": "enabled",
-        "namespace": "/scan",
-        "transports": ["websocket", "polling"],
-        "active_connections": len(socketio.server.manager.get_participants('/', '/scan')),
-        "server_time": time.time(),
-        "version": "2.0"
-    })
-
-@app.route('/api/config', methods=['GET'])
-def get_config():
-    """Get API configuration"""
-    return jsonify({
-        "openrouter_api_key_configured": bool(os.environ.get('OPENROUTER_API_KEY')),
-        "ai_enabled": bool(os.environ.get('OPENROUTER_API_KEY'))
-    })
-
-@app.route('/api/config', methods=['POST'])
-def update_config():
-    """Update API configuration"""
-    data = request.get_json()
-    if 'openrouter_api_key' in data:
-        os.environ['OPENROUTER_API_KEY'] = data['openrouter_api_key']
-        return jsonify({"status": "success", "message": "API key updated"})
-    return jsonify({"status": "error", "message": "Invalid configuration"}), 400
-
-@app.route('/api/scans', methods=['GET'])
-def get_scans():
-    """Get all scan history"""
-    scans = db.get_all_scans()
-    return jsonify({"scans": scans})
-
-@app.route('/api/scan/<scan_id>', methods=['GET'])
-def get_scan_details(scan_id):
-    """Get detailed scan results"""
-    scan_data = db.get_scan_by_id(scan_id)
-    vulnerabilities = db.get_vulnerabilities_by_scan(scan_id)
-    chains = db.get_chains_by_scan(scan_id)
-    
-    return jsonify({
-        "scan": scan_data,
-        "vulnerabilities": vulnerabilities,
-        "chains": chains,
-        "stats": db.get_scan_stats(scan_id)
-    })
-
-@app.route('/api/scan/<scan_id>/cancel', methods=['POST'])
-def cancel_scan(scan_id):
-    """Cancel an active scan"""
-    if scan_id in active_scans:
-        active_scans[scan_id]['cancelled'] = True
-        db.update_scan_status(scan_id, 'cancelled')
-        broadcaster.broadcast_event('scan_cancelled', {
-            'scan_id': scan_id,
-            'timestamp': time.time()
-        })
-        return jsonify({"status": "success", "message": "Scan cancellation requested"})
-    return jsonify({"status": "error", "message": "Scan not found or already completed"}), 404
-
-@app.route('/api/scan/<scan_id>/export', methods=['GET'])
-def export_scan(scan_id):
-    """Export scan results as JSON"""
-    scan_data = db.get_scan_by_id(scan_id)
-    vulnerabilities = db.get_vulnerabilities_by_scan(scan_id)
-    chains = db.get_chains_by_scan(scan_id)
-    http_history = db.get_http_history(scan_id)
-    statistics = db.get_scan_statistics(scan_id)
-    
-    export_data = {
-        "scan_info": scan_data,
-        "vulnerabilities": vulnerabilities,
-        "attack_chains": chains,
-        "http_history": http_history,
-        "statistics": statistics,
-        "generated_at": datetime.now().isoformat(),
-        "platform": "CyberSage v2.0"
-    }
-    
-    return jsonify(export_data)
-
-@app.route('/api/scan/<scan_id>/export/pdf', methods=['GET'])
-def export_scan_pdf(scan_id):
-    """Export scan results as PDF report"""
-    try:
-        scan_data = db.get_scan_by_id(scan_id)
-        vulnerabilities = db.get_vulnerabilities_by_scan(scan_id)
-        chains = db.get_chains_by_scan(scan_id)
-        statistics = db.get_scan_statistics(scan_id)
-        
-        if not scan_data:
-            return jsonify({"error": "Scan not found"}), 404
-        
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            pdf_path = tmp_file.name
-        
-        pdf_generator.generate_scan_report(
-            scan_data, 
-            vulnerabilities, 
-            chains, 
-            statistics, 
-            pdf_path
-        )
-        
-        return send_file(
-            pdf_path,
-            as_attachment=True,
-            download_name=f'cybersage-scan-{scan_id}.pdf',
-            mimetype='application/pdf'
-        )
-        
-    except Exception as e:
-        return jsonify({"error": f"PDF generation failed: {str(e)}"}), 500
-
-@app.route('/api/scan/import', methods=['POST'])
-def import_scan():
-    """Import scan results from JSON/XML file"""
-    try:
-        if 'file' not in request.files:
-            return jsonify({"error": "No file uploaded"}), 400
-        
-        file = request.files['file']
-        scanner_type = request.form.get('scanner_type', 'generic')
-        
-        content = file.read().decode('utf-8')
-        
-        # Parse based on scanner type
-        scan_id = f"import_{int(time.time())}"
-        db.create_scan(scan_id, f"Imported from {scanner_type}", 'import')
-        
-        if scanner_type == 'nmap':
-            scanner_integration.integrate_nmap_results(scan_id, content)
-        elif scanner_type == 'nessus':
-            data = json.loads(content)
-            scanner_integration.integrate_nessus_results(scan_id, data)
-        elif scanner_type == 'zap':
-            data = json.loads(content)
-            scanner_integration.integrate_owasp_zap_results(scan_id, data)
-        elif scanner_type == 'burp':
-            data = json.loads(content)
-            scanner_integration.integrate_burp_results(scan_id, data)
-        else:
-            data = json.loads(content)
-            scanner_integration.integrate_custom_scanner(scan_id, scanner_type, data)
-        
-        db.update_scan_status(scan_id, 'completed')
-        
-        return jsonify({
-            "status": "success",
-            "scan_id": scan_id,
-            "message": f"Successfully imported {scanner_type} results"
-        })
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/scan/<scan_id>/history', methods=['GET'])
-def get_scan_history(scan_id):
-    """Get HTTP request/response history"""
-    history = db.get_http_history(scan_id)
-    return jsonify({"history": history})
-
-@app.route('/api/scan/<scan_id>/statistics', methods=['GET'])
-def get_scan_statistics(scan_id):
-    """Get detailed scan statistics"""
-    stats = db.get_scan_statistics(scan_id)
-    return jsonify({"statistics": stats})
-
-@app.route('/api/scan/<scan_id>/blueprint', methods=['GET'])
-def get_scan_blueprint(scan_id):
-    """Get recon blueprint and OSINT details"""
-    data = db.get_recon_blueprint(scan_id)
-    return jsonify(data)
-
-@app.route('/api/vulnerability/<int:vuln_id>', methods=['GET'])
-def get_vulnerability_details(vuln_id):
-    """Get full vulnerability details with HTTP history"""
-    vuln = db.get_vulnerability_details(vuln_id)
-    return jsonify({"vulnerability": vuln})
-
-@app.route('/api/scan/<scan_id>/forms', methods=['GET'])
-def get_scan_forms(scan_id):
-    """Get all discovered forms for a scan"""
-    forms = db.get_forms_by_scan(scan_id)
-    return jsonify({'forms': forms})
-
-@app.route('/api/forms/analyze', methods=['POST'])
-def analyze_form():
-    """Get AI analysis for a specific form"""
-    from tools.form_discovery import AIFormAnalyzer
-    
-    data = request.get_json()
-    form_data = data.get('form_data')
-    
-    if not form_data:
-        return jsonify({"error": "form_data is required"}), 400
-    
-    api_key = os.environ.get('OPENROUTER_API_KEY')
-    if not api_key:
-        return jsonify({"error": "OpenRouter API key not configured"}), 500
-    
-    analyzer = AIFormAnalyzer(api_key)
-    
-    try:
-        analysis = analyzer.analyze_form_security(form_data)
-        return jsonify(analysis)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/repeater/send', methods=['POST'])
-def repeater_send():
-    """Send HTTP request via Repeater"""
-    try:
-        import requests
-        
-        payload = request.get_json(force=True) or {}
-        method = (payload.get('method') or 'GET').upper()
-        url = payload.get('url')
-        headers = payload.get('headers') or {}
-        body = payload.get('body') or ''
-        timeout = int(payload.get('timeout') or 20)
-        scan_id = payload.get('scan_id') or f"manual_{int(time.time())}"
-
-        if not url:
-            return jsonify({"error": "url is required"}), 400
-
-        session = requests.Session()
-        session.verify = False
-
-        start = time.time()
-        resp = session.request(method, url, headers=headers, data=body, timeout=timeout, allow_redirects=True)
-        elapsed_ms = int((time.time() - start) * 1000)
-
-        req_headers_raw = "\n".join([f"{k}: {v}" for k, v in (headers or {}).items()])
-        resp_headers_raw = "\n".join([f"{k}: {v}" for k, v in resp.headers.items()])
-
-        db.add_http_request(
-            scan_id=scan_id,
-            method=method,
-            url=url,
-            req_headers=req_headers_raw,
-            req_body=str(body)[:10000],
-            resp_code=resp.status_code,
-            resp_headers=resp_headers_raw[:10000],
-            resp_body=resp.text[:50000],
-            resp_time_ms=elapsed_ms,
-            vuln_id=None
-        )
-
-        return jsonify({
-            "scan_id": scan_id,
-            "status": "ok",
-            "response": {
-                "code": resp.status_code,
-                "headers": dict(resp.headers),
-                "body": resp.text,
-                "time_ms": elapsed_ms
-            }
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ============================================================================
-# WEBSOCKET EVENT HANDLERS
-# ============================================================================
-
-@socketio.on('connect', namespace='/scan')
-def handle_connect():
-    """Handle client connection"""
-    print(f'✅ [WebSocket] Client connected: {request.sid}')
-    print(f'   Namespace: {request.namespace}')
-    print(f'   Remote Address: {request.remote_addr}')
-    print(f'   User Agent: {request.headers.get("User-Agent", "Unknown")}')
-    emit('connected', {
-        'status': 'ready',
-        'message': 'Connected to CyberSage v2.0',
-        'server_time': time.time(),
-        'version': '2.0',
-        'ai_enabled': bool(os.environ.get('OPENROUTER_API_KEY')),
-        'socket_id': request.sid
-    })
-
-@socketio.on('disconnect', namespace='/scan')
-def handle_disconnect():
-    """Handle client disconnection"""
-    print(f'❌ [WebSocket] Client disconnected: {request.sid}')
-    print(f'   Namespace: {request.namespace}')
-    print(f'   Remote Address: {request.remote_addr}')
-
-@socketio.on('ping', namespace='/scan')
-def handle_ping():
-    """Handle ping from client"""
-    print(f'🏓 [WebSocket] Ping received from {request.sid}')
-    emit('pong', {'timestamp': time.time(), 'server': 'CyberSage v2.0'})
-
-@socketio.on('test_connection', namespace='/scan')
-def handle_test_connection(data):
-    """Handle test connection from client"""
-    print(f'🧪 [WebSocket] Test connection received from {request.sid}:', data)
-    emit('test_response', {
-        'status': 'success',
-        'message': 'Test connection successful',
-        'timestamp': time.time(),
-        'data': data
-    })
-
-@socketio.on('start_scan', namespace='/scan')
-def handle_start_scan(data):
-    """Start a new security scan"""
-    print(f'[WebSocket] Received start_scan request: {data}')
-    
-    target = data.get('target')
-    scan_mode = data.get('mode', 'elite')
-    options = {
-        'intensity': data.get('intensity', 'normal'),
-        'auth': data.get('auth', {}),
-        'policy': data.get('policy', {}),
-        'spiderConfig': data.get('spiderConfig', {}),
-        'tools': data.get('tools', {})  # FIXED: Store selected tools
-    }
-    
-    if not target:
-        emit('error', {'message': 'Target is required'})
-        return
-    
-    scan_id = f"scan_{int(time.time())}_{target.replace('://', '_').replace('/', '_')[:30]}"
-    
-    print(f'[Scan] Starting scan {scan_id} for target: {target}')
-    print(f'[Scan] Selected tools: {options.get("tools")}')
-    
-    db.create_scan(scan_id, target, scan_mode)
-    
-    emit('scan_started', {
-        'scan_id': scan_id,
-        'target': target,
-        'mode': scan_mode,
-        'timestamp': time.time()
-    })
-    
-    # Start scan in background thread
-    scan_thread = threading.Thread(
-        target=execute_scan_async,
-        args=(scan_id, target, scan_mode, options),
-        daemon=True
-    )
-    scan_thread.start()
-    
-    active_scans[scan_id] = {
-        'target': target,
-        'mode': scan_mode,
-        'thread': scan_thread,
-        'started_at': time.time(),
-        'cancelled': False
-    }
-
-def execute_scan_async(scan_id, target, scan_mode, options=None):
-    """Execute scan asynchronously"""
-    try:
-        print(f'[Scan] Executing scan {scan_id}')
-        
-        broadcaster.broadcast_event('scan_status', {
-            'scan_id': scan_id,
-            'status': 'running',
-            'message': 'Initializing CyberSage Elite Scanner...'
-        })
-        
-        # Execute the scan with cancellation support
-        results = scan_orchestrator.execute_elite_scan(
-            scan_id, 
-            target, 
-            scan_mode, 
-            options,
-            lambda: active_scans.get(scan_id, {}).get('cancelled', False)
-        )
-        
-        # Check if cancelled
-        if active_scans.get(scan_id, {}).get('cancelled', False):
-            print(f'[Scan] Scan {scan_id} was cancelled')
-            return
-        
-        # Update scan status
-        db.update_scan_status(scan_id, 'completed')
-        
-        broadcaster.broadcast_event('scan_completed', {
-            'scan_id': scan_id,
-            'status': 'completed',
-            'results_summary': results,
-            'timestamp': time.time()
-        })
-        
-        print(f'[Scan] Completed scan {scan_id}')
-        
-    except Exception as e:
-        print(f"[ERROR] Scan {scan_id} failed: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        
-        db.update_scan_status(scan_id, 'failed', str(e))
-        
-        broadcaster.broadcast_event('scan_error', {
-            'scan_id': scan_id,
-            'error': str(e),
-            'timestamp': time.time()
-        })
-    
-    finally:
-        if scan_id in active_scans:
-            del active_scans[scan_id]
-
-@socketio.on('stop_scan', namespace='/scan')
-def handle_stop_scan(data):
-    """Stop an active scan"""
+# API: AI Analysis
+@app.route('/api/ai/analyze', methods=['POST'])
+def ai_analyze():
+    """AI-powered vulnerability analysis"""
+    data = request.json
     scan_id = data.get('scan_id')
+    vulnerabilities = data.get('vulnerabilities', [])
+    scan_context = data.get('context', {})
     
-    if scan_id in active_scans:
-        active_scans[scan_id]['cancelled'] = True
-        db.update_scan_status(scan_id, 'stopped')
-        emit('scan_stopped', {'scan_id': scan_id})
-        print(f'[Scan] Stopped scan {scan_id}')
+    if not ai_prioritizer:
+        return jsonify({
+            'error': 'AI service not available. Please configure OPENROUTER_API_KEY',
+            'status': 'error'
+        }), 503
+    
+    try:
+        broadcaster.broadcast_log(scan_id, '🤖 Starting AI-powered analysis...')
+        
+        # Run AI analysis
+        result = ai_prioritizer.prioritize_vulnerabilities(vulnerabilities, scan_context)
+        
+        if result.get('status') == 'success':
+            # Store analysis
+            ai_analysis_db[scan_id] = {
+                'id': f"ai-{scan_id}-{int(time.time())}",
+                'scan_id': scan_id,
+                'analysis': result,
+                'created_at': datetime.now().isoformat()
+            }
+            
+            broadcaster.broadcast_event('ai_analysis_complete', {
+                'scan_id': scan_id,
+                'status': 'success'
+            })
+            
+            return jsonify(result)
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        broadcaster.broadcast_log(scan_id, f'❌ AI analysis error: {str(e)}')
+        return jsonify({
+            'error': str(e),
+            'status': 'error'
+        }), 500
+
+# API: Exploit Verification
+@app.route('/api/verify/exploit', methods=['POST'])
+def verify_exploit():
+    """Verify if vulnerability is exploitable"""
+    data = request.json
+    vulnerability = data.get('vulnerability')
+    scan_id = data.get('scan_id', 'unknown')
+    
+    if not exploit_verifier:
+        return jsonify({
+            'error': 'Exploit verifier not available',
+            'verified': False
+        }), 503
+    
+    try:
+        vuln_type = vulnerability.get('type', vulnerability.get('title', '')).lower()
+        
+        broadcaster.broadcast_log(scan_id, f'🔍 Verifying: {vulnerability.get("title")}')
+        
+        # Determine verification method
+        if 'sql' in vuln_type:
+            result = exploit_verifier.verify_sql_injection(vulnerability)
+        elif 'xss' in vuln_type:
+            result = exploit_verifier.verify_xss(vulnerability)
+        elif 'command' in vuln_type or 'rce' in vuln_type:
+            result = exploit_verifier.verify_command_injection(vulnerability)
+        elif 'file' in vuln_type or 'lfi' in vuln_type:
+            result = exploit_verifier.verify_file_inclusion(vulnerability)
+        else:
+            result = {
+                'verified': False,
+                'confidence': vulnerability.get('confidence', 70),
+                'note': 'Verification not available for this vulnerability type'
+            }
+        
+        # Generate PoC if verified
+        if result.get('verified') and exploit_verifier:
+            result['exploit_poc'] = exploit_verifier.generate_exploit_poc(vulnerability, result)
+        
+        # Generate remediation code if AI available
+        if result.get('verified') and ai_prioritizer:
+            result['remediation_code'] = ai_prioritizer.generate_remediation_code(vulnerability)
+        
+        # Store verification result
+        verification_id = f"verify-{vulnerability.get('id', 'unknown')}-{int(time.time())}"
+        verification_db[verification_id] = {
+            'id': verification_id,
+            'vulnerability_id': vulnerability.get('id'),
+            'result': result,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        status = 'verified' if result.get('verified') else 'not_verified'
+        broadcaster.broadcast_event('verification_complete', {
+            'vulnerability_id': vulnerability.get('id'),
+            'verified': result.get('verified'),
+            'confidence': result.get('confidence')
+        })
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        broadcaster.broadcast_log(scan_id, f'❌ Verification error: {str(e)}')
+        return jsonify({
+            'error': str(e),
+            'verified': False
+        }), 500
+
+# API: Business Impact Calculation
+@app.route('/api/business/impact', methods=['POST'])
+def calculate_business_impact():
+    """Calculate business impact and ROI"""
+    data = request.json
+    scan_id = data.get('scan_id')
+    vulnerabilities = data.get('vulnerabilities', [])
+    business_inputs = data.get('inputs', {})
+    
+    if not business_calculator:
+        return jsonify({
+            'error': 'Business calculator not available'
+        }), 503
+    
+    try:
+        result = business_calculator.calculate_impact(vulnerabilities, business_inputs)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+# API: Batch verify all vulnerabilities
+@app.route('/api/verify/batch', methods=['POST'])
+def batch_verify():
+    """Batch verify multiple vulnerabilities"""
+    data = request.json
+    scan_id = data.get('scan_id')
+    vulnerabilities = data.get('vulnerabilities', [])
+    
+    if not exploit_verifier:
+        return jsonify({
+            'error': 'Exploit verifier not available'
+        }), 503
+    
+    try:
+        results = []
+        for vuln in vulnerabilities:
+            # Verify each vulnerability
+            vuln_data = {'vulnerability': vuln, 'scan_id': scan_id}
+            # Use internal verification logic
+            result = verify_exploit_internal(vuln, scan_id)
+            results.append({
+                'vulnerability_id': vuln.get('id'),
+                'result': result
+            })
+            
+            # Small delay between verifications
+            time.sleep(0.5)
+        
+        return jsonify({
+            'results': results,
+            'total': len(results),
+            'verified': sum(1 for r in results if r['result'].get('verified'))
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+def verify_exploit_internal(vulnerability, scan_id):
+    """Internal verification helper"""
+    vuln_type = vulnerability.get('type', vulnerability.get('title', '')).lower()
+    
+    broadcaster.broadcast_log(scan_id, f'🔍 Verifying: {vulnerability.get("title")}')
+    
+    if 'sql' in vuln_type:
+        result = exploit_verifier.verify_sql_injection(vulnerability)
+    elif 'xss' in vuln_type:
+        result = exploit_verifier.verify_xss(vulnerability)
+    elif 'command' in vuln_type or 'rce' in vuln_type:
+        result = exploit_verifier.verify_command_injection(vulnerability)
+    elif 'file' in vuln_type or 'lfi' in vuln_type:
+        result = exploit_verifier.verify_file_inclusion(vulnerability)
     else:
-        emit('error', {'message': 'Scan not found or already completed'})
+        result = {
+            'verified': False,
+            'confidence': vulnerability.get('confidence', 70)
+        }
+    
+    return result
 
-# Register blueprints
-app.register_blueprint(repeater_bp)
+# Socket.IO events
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
+    emit('connected', {'status': 'connected'})
 
-# ============================================================================
-# MAIN
-# ============================================================================
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
+
+@socketio.on('subscribe_scan')
+def handle_subscribe(data):
+    scan_id = data.get('scan_id')
+    print(f'Client subscribed to scan: {scan_id}')
 
 if __name__ == '__main__':
-    print("\n" + "=" * 80)
-    print("🧠 CyberSage v2.0 - Elite Vulnerability Intelligence Platform")
-    print("=" * 80)
-    print(f"[+] Backend: http://0.0.0.0:5000")
-    print(f"[+] WebSocket: /scan namespace")
-    print(f"[+] Database: {db.db_path}")
-    print(f"[+] AI Enabled: {bool(os.environ.get('OPENROUTER_API_KEY'))}")
-    print("=" * 80)
-    print("[+] ✅ Ready for connections!")
-    print("=" * 80 + "\n")
+    port = int(os.environ.get('PORT', 5002))
+    print(f"""
+    ╔══════════════════════════════════════════════════════════════╗
+    ║  CyberSage AI Backend - Starting                             ║
+    ║  Port: {port}                                                    ║
+    ║  AI Enabled: {ai_prioritizer is not None}                                            ║
+    ║  Socket.IO: Enabled                                          ║
+    ╚══════════════════════════════════════════════════════════════╝
+    """)
     
-    socketio.run(
-        app,
-        host='0.0.0.0',
-        port=5000,
-        debug=False,
-        use_reloader=False,
-        allow_unsafe_werkzeug=True
-    )
+    socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
+
+# ===== SECURITY TESTING ENDPOINTS =====
+
+@app.route('/api/testing/execute', methods=['POST'])
+def execute_security_test():
+    """Execute HTTP request with full control"""
+    data = request.json
+    request_config = data.get('request', {})
+    
+    try:
+        result = security_tester.execute_request(request_config)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/testing/vulnerability-scan', methods=['POST'])
+def vulnerability_scan():
+    """Run comprehensive vulnerability scan"""
+    data = request.json
+    url = data.get('url')
+    params = data.get('params', {})
+    method = data.get('method', 'GET')
+    
+    if not url:
+        return jsonify({'error': 'URL is required'}), 400
+    
+    try:
+        broadcaster.broadcast_log('vuln_scan', f'Starting vulnerability scan on {url}')
+        result = security_tester.comprehensive_vulnerability_scan(url, params, method)
+        broadcaster.broadcast_event('vulnerability_scan_complete', {
+            'url': url,
+            'results': result
+        })
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+@app.route('/api/testing/sql-injection', methods=['POST'])
+def test_sql_injection():
+    """Test for SQL injection vulnerabilities"""
+    data = request.json
+    url = data.get('url')
+    params = data.get('params', {})
+    method = data.get('method', 'GET')
+    
+    if not url:
+        return jsonify({'error': 'URL is required'}), 400
+    
+    try:
+        result = security_tester.test_sql_injection(url, params, method)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+@app.route('/api/testing/xss', methods=['POST'])
+def test_xss():
+    """Test for XSS vulnerabilities"""
+    data = request.json
+    url = data.get('url')
+    params = data.get('params', {})
+    method = data.get('method', 'GET')
+    
+    if not url:
+        return jsonify({'error': 'URL is required'}), 400
+    
+    try:
+        result = security_tester.test_xss(url, params, method)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+@app.route('/api/testing/command-injection', methods=['POST'])
+def test_command_injection():
+    """Test for command injection vulnerabilities"""
+    data = request.json
+    url = data.get('url')
+    params = data.get('params', {})
+    method = data.get('method', 'GET')
+    
+    if not url:
+        return jsonify({'error': 'URL is required'}), 400
+    
+    try:
+        result = security_tester.test_command_injection(url, params, method)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+@app.route('/api/testing/path-traversal', methods=['POST'])
+def test_path_traversal():
+    """Test for path traversal vulnerabilities"""
+    data = request.json
+    url = data.get('url')
+    params = data.get('params', {})
+    method = data.get('method', 'GET')
+    
+    if not url:
+        return jsonify({'error': 'URL is required'}), 400
+    
+    try:
+        result = security_tester.test_path_traversal(url, params, method)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+@app.route('/api/testing/payloads/<vuln_type>', methods=['GET'])
+def get_payloads(vuln_type):
+    """Get payload library for vulnerability type"""
+    try:
+        payloads = security_tester.generate_payloads(vuln_type)
+        return jsonify({
+            'type': vuln_type,
+            'payloads': payloads
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+@app.route('/api/testing/history', methods=['GET'])
+def get_test_history():
+    """Get testing history"""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        history = security_tester.test_history[-limit:]
+        return jsonify({
+            'history': history,
+            'total': len(security_tester.test_history)
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e)
+        }), 500

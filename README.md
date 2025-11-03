@@ -1,517 +1,313 @@
-# CyberSage 2.0 - Advanced Cybersecurity Vulnerability Scanner
+# CyberSage 2.0 - AI-Powered Security Testing Platform
 
-![CyberSage](https://img.shields.io/badge/CyberSage-2.0-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
-![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![Node.js](https://img.shields.io/badge/Node.js-18+-green)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/yourusername/cybersage?style=social)](https://github.com/yourusername/cybersage)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-**CyberSage 2.0** is a comprehensive, enterprise-grade cybersecurity vulnerability scanner that provides advanced network analysis, security assessment, and vulnerability detection capabilities. Built with modern web technologies and powered by industry-standard security tools.
+> Professional-grade security testing platform with AI-powered vulnerability analysis, HTTP request repeater, and automated exploit verification.
 
-## 🚀 Quick Start
+![CyberSage Banner](docs/images/banner.png)
 
-### One-Command Installation
+## Features
 
+### Core Security Testing Tools
+
+- **HTTP Request Repeater** - Burp Suite-like interface for manual HTTP testing
+  - Full HTTP method support (GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD)
+  - Header and parameter manipulation
+  - Request history and session management
+  - Syntax highlighting for requests and responses
+  - Response analysis and comparison
+
+- **Security Vulnerability Scanner** - Automated vulnerability detection
+  - SQL injection testing
+  - XSS (Cross-Site Scripting) detection
+  - Command injection testing
+  - Path traversal testing
+  - File upload vulnerability scanning
+  - Authentication bypass detection
+
+- **AI-Powered Analysis** - Claude AI integration
+  - Intelligent vulnerability prioritization
+  - Attack path mapping
+  - 60x faster than manual analysis
+  - Real-time exploit verification
+  - Automated remediation code generation
+
+- **Business Impact Calculator** - Financial risk assessment
+  - ROI analysis for security measures
+  - Cost-benefit analysis
+  - Risk quantification
+  - Compliance scoring
+
+### Professional Features
+
+- **Real-time Testing** - WebSocket-based live updates
+- **Payload Generation** - Pre-built security testing payloads
+- **Session Management** - Track and replay testing sessions
+- **Export Capabilities** - JSON, HTML, and PDF reports
+- **Proxy Functionality** - HTTP traffic interception
+- **Modern UI** - Professional blue-themed interface with micro-animations
+
+## Demo
+
+🔗 **Live Demo:** [https://cybersage-demo.space.minimax.io](https://cybersage-demo.space.minimax.io)
+
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/images/dashboard.png" alt="Dashboard" width="400"/></td>
+    <td><img src="docs/images/repeater.png" alt="HTTP Repeater" width="400"/></td>
+  </tr>
+  <tr>
+    <td align="center">Dashboard</td>
+    <td align="center">HTTP Request Repeater</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/scanner.png" alt="Security Scanner" width="400"/></td>
+    <td><img src="docs/images/ai-analysis.png" alt="AI Analysis" width="400"/></td>
+  </tr>
+  <tr>
+    <td align="center">Security Scanner</td>
+    <td align="center">AI-Powered Analysis</td>
+  </tr>
+</table>
+
+## Quick Start
+
+### Prerequisites
+
+- **Node.js** 18+ and npm/pnpm
+- **Python** 3.8+
+- **Git**
+
+### Installation
+
+1. **Clone the repository**
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/CyberSage-2.0.git
-cd CyberSage-2.0
-
-# Run the automated installer
-chmod +x setup.sh && ./setup.sh
+git clone https://github.com/yourusername/cybersage.git
+cd cybersage
 ```
 
-The setup script will automatically:
-- ✅ Detect your operating system (Linux/macOS)
-- ✅ Install all required dependencies
-- ✅ Set up the Python backend with virtual environment
-- ✅ Configure the React frontend
-- ✅ Install security tools (Nmap, Nikto, SQLMap, Gobuster, etc.)
-- ✅ Start all services automatically
-- ✅ Launch the web interface in your browser
-
-**That's it!** CyberSage will be running at `http://localhost:3000`
-
-## 🌟 Features
-
-### Core Capabilities
-- **🔍 Network Discovery**: Advanced port scanning and network topology analysis
-- **🛡️ Vulnerability Assessment**: Comprehensive security vulnerability detection
-- **🌐 Web Security Analysis**: HTTP security headers, SSL/TLS analysis, and web application testing
-- **🤖 AI-Powered Analysis**: Machine learning-based threat detection and pattern recognition
-- **📊 Real-time Reporting**: Live scan results with detailed technical reports
-- **🔄 Continuous Monitoring**: Scheduled scans and automated security assessments
-
-### Security Tools Integration
-- **Nmap**: Network discovery and security auditing
-- **Nikto**: Web vulnerability scanner
-- **SQLMap**: Automatic SQL injection detection
-- **Gobuster**: Directory/file brute-forcing
-- **Dirb**: Web content scanner
-- **WPScan**: WordPress security scanner
-- **Subfinder**: Subdomain discovery
-- **Amass**: Network mapping and subdomain enumeration
-- **Hydra**: Password brute-forcing
-- **John the Ripper**: Password cracking
-- **Metasploit Framework**: Penetration testing
-- **Aircrack-ng**: Wireless network auditing
-- **Burp Suite**: Web application security testing
-- **OWASP ZAP**: Web application security scanner
-- **Nessus**: Vulnerability assessment (professional edition)
-
-## 🏗️ Architecture
-
-```
-CyberSage 2.0/
-├── backend/                 # Flask + SocketIO backend
-│   ├── app.py              # Main application server
-│   ├── models/             # Data models
-│   ├── routes/             # API endpoints
-│   ├── utils/              # Security tool wrappers
-│   └── requirements.txt    # Python dependencies
-├── frontend/               # React 18 frontend
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── pages/          # Application pages
-│   │   ├── hooks/          # Custom React hooks
-│   │   └── utils/          # Frontend utilities
-│   └── package.json        # Node.js dependencies
-├── tools/                  # Security tools integration
-├── setup.sh               # Automated installation script
-├── README.md              # This file
-├── INSTALLATION.md        # Detailed installation guide
-├── TOOLS.md               # Comprehensive tools documentation
-└── QUICK-START.md         # 30-second quick start guide
-```
-
-## 🛠️ System Requirements
-
-### Minimum Requirements
-- **Operating System**: Linux (Ubuntu 20.04+, CentOS 8+, Debian 10+) or macOS (10.15+)
-- **Python**: 3.10 or higher
-- **Node.js**: 18.0 or higher
-- **RAM**: 4GB minimum, 8GB recommended
-- **Storage**: 2GB free space
-- **Network**: Internet connection for tool downloads
-
-### Recommended Specifications
-- **RAM**: 16GB for optimal performance
-- **CPU**: Multi-core processor (4+ cores)
-- **Storage**: SSD for faster scan performance
-- **Network**: High-speed internet for cloud-based scans
-
-## 📋 Detailed Installation
-
-### Step 1: Prerequisites
-
-**Install required system packages:**
-
+2. **Run the setup script**
 ```bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install -y curl wget git python3 python3-pip python3-venv
-
-# CentOS/RHEL
-sudo yum update -y
-sudo yum install -y curl wget git python3 python3-pip
-
-# macOS (requires Homebrew)
-brew install python3 git
-```
-
-**Install Node.js:**
-
-```bash
-# Using NodeSource repository (recommended)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# macOS
-brew install node@18
-```
-
-### Step 2: Clone and Install
-
-```bash
-# Clone the repository
-git clone https://github.com/your-username/CyberSage-2.0.git
-cd CyberSage-2.0
-
-# Make setup script executable
 chmod +x setup.sh
-
-# Run the automated installer
 ./setup.sh
 ```
 
-### Step 3: Manual Security Tools Installation
-
-The setup script will automatically install most tools, but you can manually install additional tools:
-
+3. **Start the application**
 ```bash
-# Install security tools
-sudo apt install -y nmap nikto dirb gobuster wpscan hydra
+# Start backend
+cd backend
+python app.py
 
-# Install additional Python packages
-pip3 install -r requirements.txt
+# In another terminal, start frontend
+cd frontend
+npm run dev
 ```
 
-### Step 4: Configure Environment
-
-```bash
-# Backend configuration
-cp backend/.env.example backend/.env
-# Edit backend/.env with your settings
-
-# Frontend configuration  
-cp frontend/.env.example frontend/.env
-# Edit frontend/.env with your settings
+4. **Access the application**
+```
+Frontend: http://localhost:5173
+Backend API: http://localhost:5001
 ```
 
-### Step 5: Start Services
+### Docker Installation (Alternative)
 
 ```bash
-# Start backend server
-cd backend && python3 app.py
-
-# In a new terminal, start frontend
-cd frontend && npm start
+docker-compose up -d
 ```
 
-CyberSage will be available at `http://localhost:3000`
+Access at `http://localhost:8080`
 
-## 🎯 Usage Examples
+## Documentation
 
-### Basic Network Scan
+- [Installation Guide](docs/INSTALLATION.md)
+- [User Guide](docs/USER_GUIDE.md)
+- [API Documentation](docs/API.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Contributing Guide](CONTRIBUTING.md)
+- [Security Policy](SECURITY.md)
+
+## Technology Stack
+
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for fast development
+- **Tailwind CSS** for styling
+- **shadcn/ui** for UI components
+- **Lucide React** for icons
+- **WebSocket** for real-time updates
+
+### Backend
+- **Python 3.8+**
+- **Flask** web framework
+- **Socket.IO** for WebSocket communication
+- **SQLite** for data persistence
+- **Claude AI** for intelligent analysis
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Frontend (React)                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │   Dashboard  │  │  HTTP        │  │   Security   │  │
+│  │              │  │  Repeater    │  │   Scanner    │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
+└─────────────────────────────────────────────────────────┘
+                           ↓ HTTP/WebSocket
+┌─────────────────────────────────────────────────────────┐
+│                  Backend API (Flask)                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │   Request    │  │  Vulnerability│  │  AI Analysis │  │
+│  │   Proxy      │  │  Scanner     │  │  Engine      │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
+└─────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│              External Services & Tools                   │
+│     Claude AI  │  Security Tools  │  Database           │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Usage Examples
+
+### HTTP Request Testing
 
 ```javascript
-// Using the web interface
-1. Navigate to http://localhost:3000
-2. Select "Network Scanner"
-3. Enter target IP or range (e.g., 192.168.1.0/24)
-4. Click "Start Scan"
-5. View real-time results in the dashboard
+// Send a custom HTTP request
+POST /api/repeater/send
+{
+  "url": "https://example.com/api/login",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "username": "test",
+    "password": "test123"
+  }
+}
 ```
 
-### Vulnerability Assessment
-
-```python
-# Python API usage
-from cybersage import VulnerabilityScanner
-
-scanner = VulnerabilityScanner()
-results = scanner.scan_target("https://example.com")
-print(results.get_vulnerabilities())
-```
-
-### Web Application Testing
-
-```bash
-# Command line usage
-python3 tools/web_scanner.py --target "https://example.com" --scan-type full
-```
-
-### Automated Scanning
-
-```bash
-# Schedule regular scans
-crontab -e
-# Add: 0 2 * * * /path/to/cybersage/tools/scheduled_scan.py
-```
-
-## 📊 API Documentation
-
-### REST Endpoints
-
-#### Scan Management
-- `POST /api/scans/start` - Start a new scan
-- `GET /api/scans/{scan_id}` - Get scan status and results
-- `DELETE /api/scans/{scan_id}` - Cancel ongoing scan
-- `GET /api/scans` - List all scans
-
-#### Tool Execution
-- `POST /api/tools/nmap` - Execute Nmap scan
-- `POST /api/tools/nikto` - Run Nikto vulnerability scan
-- `POST /api/tools/sqlmap` - Perform SQL injection test
-- `POST /api/tools/gobuster` - Directory brute-forcing
-
-#### Reports
-- `GET /api/reports/{scan_id}` - Get scan report
-- `POST /api/reports/export` - Export report (PDF/JSON/CSV)
-
-### WebSocket Events
+### Security Scanning
 
 ```javascript
-// Real-time scan updates
-const socket = io('http://localhost:5000');
-
-socket.on('scan_progress', (data) => {
-    console.log(`Scan progress: ${data.progress}%`);
-});
-
-socket.on('scan_complete', (data) => {
-    console.log('Scan completed:', data.results);
-});
+// Start a security scan
+WebSocket: emit('start_scan', {
+  target: "https://example.com",
+  scan_types: ["sql_injection", "xss", "command_injection"]
+})
 ```
 
-### Python SDK
+### AI Vulnerability Analysis
 
 ```python
-from cybersage import CyberSage
+# Analyze vulnerabilities with AI
+from ai_smart_prioritizer import AISmartPrioritizer
 
-# Initialize client
-client = CyberSage(api_key="your-api-key")
-
-# Create scan
-scan = client.scans.create(
-    target="192.168.1.1",
-    scan_type="network_discovery",
-    tools=["nmap", "nikto"]
-)
-
-# Monitor progress
-for update in scan.stream():
-    print(f"Progress: {update.progress}%")
+analyzer = AISmartPrioritizer()
+results = analyzer.prioritize_vulnerabilities(vulnerabilities)
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
-#### Backend Configuration
-```bash
-# backend/.env
-FLASK_ENV=production
-SECRET_KEY=your-secret-key-here
+Create a `.env` file in the backend directory:
+
+```env
+# API Keys
+CLAUDE_API_KEY=your_claude_api_key
+OPENAI_API_KEY=your_openai_api_key
+
+# Database
 DATABASE_URL=sqlite:///cybersage.db
-CORS_ORIGINS=http://localhost:3000
-WEBSOCKET_PATH=/socket.io
-MAX_SCAN_DURATION=3600
-THREAD_POOL_SIZE=10
-LOG_LEVEL=INFO
+
+# Server
+FLASK_ENV=development
+PORT=5001
+CORS_ORIGINS=http://localhost:5173
+
+# Security
+SECRET_KEY=your_secret_key_here
 ```
 
-#### Frontend Configuration
-```bash
-# frontend/.env
-REACT_APP_API_URL=http://localhost:5000
-REACT_APP_WEBSOCKET_URL=http://localhost:5000
-REACT_APP_MAX_FILE_SIZE=50MB
-REACT_APP_SCAN_TIMEOUT=3600
-GENERATE_SOURCEMAP=false
+### Frontend Configuration
+
+Edit `frontend/src/config.ts`:
+
+```typescript
+export const config = {
+  apiUrl: 'http://localhost:5001',
+  wsUrl: 'ws://localhost:5001',
+  features: {
+    aiAnalysis: true,
+    exportReports: true
+  }
+}
 ```
 
-### Security Configuration
+## Contributing
 
-```bash
-# tools/security_config.yaml
-nmap:
-  timing: T4
-  ports: "1-65535"
-  scripts: "vuln,safe"
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-nikto:
-  plugins: "ssl,cookies,errors"
-  maxtime: "1h"
+### Quick Contribution Guide
 
-sqlmap:
-  risk: 3
-  level: 5
-  threads: 10
-```
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## 📈 Performance Optimization
+## Security
 
-### Scan Optimization
-```bash
-# Optimize Nmap for speed
-nmap -T4 -F --min-rate 1000 target
+Found a security vulnerability? Please read our [Security Policy](SECURITY.md) and report it responsibly.
 
-# Parallel scanning
-python3 tools/parallel_scanner.py --targets targets.txt --tools nmap,nikto
-```
+## Roadmap
 
-### Resource Management
-```bash
-# Limit memory usage
-export MAX_MEMORY_USAGE=4GB
+- [ ] Integration with more security tools (Metasploit, Nessus)
+- [ ] Advanced payload generation with AI
+- [ ] Collaborative testing features
+- [ ] Mobile application support
+- [ ] Cloud deployment templates
+- [ ] Plugin system for custom tools
+- [ ] Advanced reporting with visualizations
+- [ ] Integration with CI/CD pipelines
 
-# CPU throttling
-export CPU_LIMIT=80
-```
-
-### Database Optimization
-```sql
--- Index frequently queried columns
-CREATE INDEX idx_scans_status ON scans(status);
-CREATE INDEX idx_scans_created ON scans(created_at);
-CREATE INDEX idx_results_scan_id ON scan_results(scan_id);
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### Port Already in Use
-```bash
-# Check what's using the port
-sudo netstat -tulpn | grep :3000
-
-# Kill the process
-sudo kill -9 <PID>
-```
-
-#### Permission Denied
-```bash
-# Fix script permissions
-chmod +x setup.sh
-sudo chown -R $USER:$USER /path/to/cybersage
-```
-
-#### Module Not Found
-```bash
-# Recreate virtual environment
-rm -rf venv
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-#### Nmap Not Found
-```bash
-# Install Nmap
-sudo apt install nmap
-
-# Verify installation
-which nmap
-nmap --version
-```
-
-### Debug Mode
-
-```bash
-# Enable debug logging
-export FLASK_ENV=development
-export LOG_LEVEL=DEBUG
-
-# Run with verbose output
-python3 app.py --verbose
-```
-
-### Log Analysis
-
-```bash
-# View application logs
-tail -f logs/cybersage.log
-
-# Monitor real-time logs
-tail -f logs/access.log | grep ERROR
-```
-
-## 🔐 Security Considerations
-
-### Production Deployment
-1. **Change default passwords** and API keys
-2. **Enable HTTPS** with proper SSL certificates
-3. **Implement authentication** and authorization
-4. **Use environment variables** for sensitive data
-5. **Regular security updates** for all components
-6. **Network segmentation** for scanning isolated networks
-7. **Audit logging** for all security activities
-
-### Compliance
-- **OWASP Top 10** vulnerability coverage
-- **NIST Cybersecurity Framework** alignment
-- **ISO 27001** security management standards
-- **SOC 2 Type II** compliance ready
-
-## 🚀 Advanced Features
-
-### Custom Tool Integration
-```python
-# Add custom security tool
-from cybersage.tools import BaseTool
-
-class CustomScanner(BaseTool):
-    def __init__(self):
-        super().__init__("custom_scanner", "1.0.0")
-    
-    def scan(self, target):
-        # Your custom scanning logic
-        return {"vulnerabilities": []}
-```
-
-### Scheduled Scanning
-```bash
-# Create automated scan schedules
-python3 tools/scheduler.py --add "nightly_scan" --time "02:00" --targets "192.168.1.0/24"
-```
-
-### Report Automation
-```python
-# Generate automated reports
-from cybersage.reports import ReportGenerator
-
-generator = ReportGenerator()
-pdf_report = generator.generate_pdf(scan_id="123", template="executive")
-```
-
-## 📚 Additional Documentation
-
-- **[INSTALLATION.md](INSTALLATION.md)** - Detailed installation guide with troubleshooting
-- **[TOOLS.md](TOOLS.md)** - Comprehensive documentation for all security tools
-- **[QUICK-START.md](QUICK-START.md)** - 30-second quick start guide
-- **[API_DOCS.md](API_DOCS.md)** - Complete API reference documentation
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### Development Setup
-```bash
-# Clone for development
-git clone https://github.com/your-username/CyberSage-2.0.git
-cd CyberSage-2.0
-
-# Install development dependencies
-pip install -r requirements-dev.txt
-npm install
-
-# Run tests
-npm test
-python3 -m pytest tests/
-```
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## Acknowledgments
 
-### Community Support
-- **GitHub Issues**: [Report bugs and feature requests](https://github.com/your-username/CyberSage-2.0/issues)
-- **Discussions**: [Community forum and Q&A](https://github.com/your-username/CyberSage-2.0/discussions)
-- **Wiki**: [Documentation and tutorials](https://github.com/your-username/CyberSage-2.0/wiki)
+- Built with [React](https://reactjs.org/) and [Flask](https://flask.palletsprojects.com/)
+- UI components from [shadcn/ui](https://ui.shadcn.com/)
+- Icons by [Lucide](https://lucide.dev/)
+- AI powered by [Claude](https://www.anthropic.com/)
+- Inspired by [Burp Suite](https://portswigger.net/burp) and [HETTY](https://github.com/dstotijn/hetty)
 
-### Professional Support
-- **Enterprise Support**: [Contact us for enterprise solutions](mailto:support@cybersage.com)
-- **Training**: [Professional training and certification programs](https://cybersage.com/training)
-- **Consulting**: [Security consulting and penetration testing services](https://cybersage.com/consulting)
+## Support
 
-## 🏆 Acknowledgments
+- **Documentation:** [docs/](docs/)
+- **Issues:** [GitHub Issues](https://github.com/yourusername/cybersage/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/yourusername/cybersage/discussions)
+- **Email:** support@cybersage.io
 
-- **Nmap Team** - For the industry-standard network scanner
-- **Nikto Team** - For web vulnerability scanning capabilities
-- **OWASP Community** - For security best practices and guidelines
-- **Python Community** - For the robust backend framework
-- **React Team** - For the modern frontend framework
-- **All Contributors** - For their valuable contributions to the project
+## Authors
+
+- **Your Name** - *Initial work* - [@yourusername](https://github.com/yourusername)
+
+See also the list of [contributors](https://github.com/yourusername/cybersage/contributors) who participated in this project.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/cybersage&type=Date)](https://star-history.com/#yourusername/cybersage&Date)
 
 ---
 
-**CyberSage 2.0** - Empowering cybersecurity professionals with advanced vulnerability scanning capabilities.
+**Made with ❤️ by the CyberSage Team**
 
-*Built with ❤️ by the @ashfiexe*
-
-**Version**: 2.0.0  
-**Last Updated**: October 2025  
-**Documentation Version**: 1.0
+If you found this project helpful, please give it a ⭐️!
