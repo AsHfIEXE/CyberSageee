@@ -168,24 +168,6 @@ class Database:
                 )
             ''')
             
-            # Discovered forms table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS discovered_forms (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    scan_id TEXT NOT NULL,
-                    page_url TEXT,
-                    form_index INTEGER,
-                    action TEXT,
-                    method TEXT,
-                    form_purpose TEXT,
-                    fields_json TEXT,
-                    security_analysis_json TEXT,
-                    ai_analysis_json TEXT,
-                    discovered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (scan_id) REFERENCES scans(scan_id)
-                )
-            ''')
-            
             print("[Database] Enhanced schema initialized successfully")
     
     def create_scan(self, scan_id, target, scan_mode):
@@ -219,37 +201,26 @@ class Database:
                 ''', (status, error_message, scan_id))
     
     def add_vulnerability(self, scan_id, vuln_data):
-        """Add a vulnerability finding with complete data"""
+        """Add a vulnerability finding"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            
-            # Serialize raw_data if it's a dict
-            raw_data = vuln_data.get('raw_data', {})
-            if isinstance(raw_data, dict):
-                raw_data = json.dumps(raw_data)
-            
             cursor.execute('''
                 INSERT INTO vulnerabilities 
                 (scan_id, vuln_type, severity, title, description, confidence_score, 
-                 detection_tool, affected_url, affected_parameter, payload,
-                 proof_of_concept, remediation, cwe_id, cvss_score, raw_data)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 detection_tool, affected_url, proof_of_concept, remediation, raw_data)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 scan_id,
                 vuln_data.get('type'),
                 vuln_data.get('severity'),
                 vuln_data.get('title'),
                 vuln_data.get('description'),
-                vuln_data.get('confidence_score', vuln_data.get('confidence', 50)),
-                vuln_data.get('detection_tool', vuln_data.get('tool')),
+                vuln_data.get('confidence', 50),
+                vuln_data.get('tool'),
                 vuln_data.get('url'),
-                vuln_data.get('affected_parameter'),
-                vuln_data.get('payload'),
-                vuln_data.get('proof_of_concept', vuln_data.get('poc')),
+                vuln_data.get('poc'),
                 vuln_data.get('remediation'),
-                vuln_data.get('cwe_id'),
-                vuln_data.get('cvss_score'),
-                raw_data
+                json.dumps(vuln_data.get('raw_data', {}))
             ))
             return cursor.lastrowid
     
@@ -402,16 +373,6 @@ class Database:
             row = cursor.fetchone()
             return dict(row) if row else {}
     
-    def link_http_evidence_to_vuln(self, evidence_id, vuln_id):
-        """Link HTTP evidence to a vulnerability"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE http_history 
-                SET vulnerability_id = ? 
-                WHERE id = ?
-            ''', (vuln_id, evidence_id))
-    
     def get_vulnerability_details(self, vuln_id):
         """Get full vulnerability details including HTTP history"""
         with self.get_connection() as conn:
@@ -428,13 +389,6 @@ class Database:
                     ORDER BY timestamp DESC
                 ''', (vuln_id,))
                 vuln['http_history'] = [dict(row) for row in cursor.fetchall()]
-                
-                # Parse raw_data if it exists
-                if vuln.get('raw_data'):
-                    try:
-                        vuln['raw_data'] = json.loads(vuln['raw_data'])
-                    except:
-                        pass
             
             return vuln
 
@@ -490,44 +444,3 @@ class Database:
             stats['attack_chains'] = chain_row['chain_count'] if chain_row else 0
             
             return stats
-    
-    def add_form(self, scan_id, form_data):
-        """Store discovered form"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO discovered_forms 
-                (scan_id, page_url, form_index, action, method, form_purpose, 
-                 fields_json, security_analysis_json, ai_analysis_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                scan_id,
-                form_data.get('page_url'),
-                form_data.get('form_index'),
-                form_data.get('action'),
-                form_data.get('method'),
-                form_data.get('form_purpose'),
-                json.dumps(form_data.get('fields', [])),
-                json.dumps(form_data.get('security_analysis', {})),
-                json.dumps(form_data.get('ai_analysis', {})) if form_data.get('ai_analysis') else None
-            ))
-            return cursor.lastrowid
-    
-    def get_forms_by_scan(self, scan_id):
-        """Get all forms for a scan"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT * FROM discovered_forms WHERE scan_id = ?
-            ''', (scan_id,))
-            
-            forms = []
-            for row in cursor.fetchall():
-                form = dict(row)
-                form['fields'] = json.loads(form['fields_json']) if form.get('fields_json') else []
-                form['security_analysis'] = json.loads(form['security_analysis_json']) if form.get('security_analysis_json') else {}
-                if form.get('ai_analysis_json'):
-                    form['ai_analysis'] = json.loads(form['ai_analysis_json'])
-                forms.append(form)
-            
-            return forms

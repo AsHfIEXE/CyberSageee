@@ -8,7 +8,7 @@ __author__ = 'CyberSage Team'
 # Import main scanning components
 from .recon import ReconEngine
 from .vuln_scanner import VulnerabilityScanner
-# Ajax spider removed - functionality integrated
+from .ajax_spider import AjaxSpider
 from .nmap_scanner import NmapScanner
 from .integrations import ThirdPartyScannerIntegration
 
@@ -21,6 +21,7 @@ from .advanced.ai_analyzer import AIAnalyzer
 __all__ = [
     'ReconEngine',
     'VulnerabilityScanner',
+    'AjaxSpider',
     'NmapScanner',
     'ThirdPartyScannerIntegration',
     'ChainDetector',
